@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Club {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  ciudad      String
+  provincia   String
+  estadio     String
+  escudo      String?
+  presupuesto Float   @default(1000000)
+  reputacion  Int     @default(50)
+  color1      String  @default("#003087")
+  color2      String  @default("#FFFFFF")
+
+  jugadores          Jugador[]
+  partidosLocal      Partido[]       @relation("Local")
+  partidosVisitante  Partido[]       @relation("Visitante")
+  transferenciasOrigen  Transferencia[] @relation("ClubOrigen")
+  transferenciasDestino Transferencia[] @relation("ClubDestino")
+
+  @@map("clubs")
+}
+
+model Jugador {
+  id       Int    @id @default(autoincrement())
+  nombre   String
+  apellido String
+  edad     Int
+  posicion String
+  numero   Int?
+
+  scrum     Int @default(50)
+  lineout   Int @default(50)
+  tackle    Int @default(50)
+  velocidad Int @default(50)
+  pase      Int @default(50)
+  pie       Int @default(50)
+  vision    Int @default(50)
+  potencia  Int @default(50)
+  motor     Int @default(50)
+  liderazgo Int @default(50)
+
+  valor Float @default(50000)
+  moral Int   @default(75)
+
+  clubId Int?
+  club   Club? @relation(fields: [clubId], references: [id])
+
+  transferencias Transferencia[]
+
+  @@map("jugadores")
+}
+
+model Temporada {
+  id     Int     @id @default(autoincrement())
+  nombre String
+  anio   Int
+  activa Boolean @default(false)
+
+  partidos Partido[]
+
+  @@map("temporadas")
+}
+
+model Partido {
+  id              Int      @id @default(autoincrement())
+  temporadaId     Int
+  temporada       Temporada @relation(fields: [temporadaId], references: [id])
+  clubLocalId     Int
+  clubLocal       Club     @relation("Local", fields: [clubLocalId], references: [id])
+  clubVisitanteId Int
+  clubVisitante   Club     @relation("Visitante", fields: [clubVisitanteId], references: [id])
+  jornada         Int
+  jugado          Boolean  @default(false)
+  puntosLocal     Int?
+  puntosVisitante Int?
+  triesLocal      Int?
+  triesVisitante  Int?
+
+  @@map("partidos")
+}
+
+model Transferencia {
+  id            Int      @id @default(autoincrement())
+  jugadorId     Int
+  jugador       Jugador  @relation(fields: [jugadorId], references: [id])
+  clubOrigenId  Int?
+  clubOrigen    Club?    @relation("ClubOrigen", fields: [clubOrigenId], references: [id])
+  clubDestinoId Int
+  clubDestino   Club     @relation("ClubDestino", fields: [clubDestinoId], references: [id])
+  monto         Float
+  fecha         DateTime @default(now())
+  estado        String   @default("pendiente")
+
+  @@map("transferencias")
+}
