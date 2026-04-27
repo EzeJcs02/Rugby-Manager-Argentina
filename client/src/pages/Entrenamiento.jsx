@@ -20,11 +20,19 @@ function JugadorRow({ jugador, seleccionado, onToggle, foco }) {
   return (
     <button
       onClick={() => onToggle(jugador.id)}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border-2 transition-all text-left
-        ${seleccionado ? 'border-rugby-green bg-rugby-green/15' : 'border-gray-800 bg-gray-800/40 hover:border-gray-600'}`}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left"
+      style={seleccionado
+        ? { background: 'rgba(232,23,44,0.08)', border: '2px solid rgba(232,23,44,0.4)' }
+        : { background: 'rgba(255,255,255,0.02)', border: '2px solid #1E1E32' }
+      }
     >
-      <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center
-        ${seleccionado ? 'border-rugby-green bg-rugby-green' : 'border-gray-600'}`}>
+      <div
+        className="w-4 h-4 rounded flex-shrink-0 flex items-center justify-center"
+        style={seleccionado
+          ? { border: '2px solid #E8172C', background: '#E8172C' }
+          : { border: '2px solid #374151', background: 'transparent' }
+        }
+      >
         {seleccionado && <span className="text-white text-[10px] font-bold">✓</span>}
       </div>
       <div className="flex-1 min-w-0">
@@ -47,16 +55,17 @@ function JugadorRow({ jugador, seleccionado, onToggle, foco }) {
 
 function ResultadoMejoras({ mejoras, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
+      <div className="w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl rounded-2xl"
+        style={{ background: '#12121F', border: '1px solid #1E1E32' }}
         onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-gray-700">
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid #1E1E32' }}>
           <h3 className="font-bold text-white text-lg">Resultados del entrenamiento</h3>
           <p className="text-gray-400 text-sm mt-0.5">{mejoras.length} jugador(es) entrenado(s)</p>
         </div>
         <div className="overflow-y-auto flex-1 p-4 space-y-3">
           {mejoras.map(m => (
-            <div key={m.jugadorId} className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <div key={m.jugadorId} className="rounded-lg px-4 py-3" style={{ background: '#0D0D14', border: '1px solid #1E1E32' }}>
               <p className="text-white font-medium text-sm mb-2">{m.nombre}</p>
               <div className="grid grid-cols-2 gap-1">
                 {Object.entries(m.mejoras)
@@ -64,7 +73,7 @@ function ResultadoMejoras({ mejoras, onClose }) {
                   .map(([attr, val]) => (
                     <div key={attr} className="flex items-center justify-between">
                       <span className="text-gray-400 text-xs capitalize">{attr}</span>
-                      <span className="text-rugby-green font-bold text-xs">{val}</span>
+                      <span className="font-bold text-xs" style={{ color: '#4ADE80' }}>{val}</span>
                     </div>
                   ))}
                 {m.mejoras.moral && (
@@ -77,8 +86,14 @@ function ResultadoMejoras({ mejoras, onClose }) {
             </div>
           ))}
         </div>
-        <div className="px-5 py-3 border-t border-gray-700">
-          <button onClick={onClose} className="btn-primary w-full">Aceptar</button>
+        <div className="px-5 py-3" style={{ borderTop: '1px solid #1E1E32' }}>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider transition-opacity hover:opacity-90"
+            style={{ background: '#E8172C' }}
+          >
+            Aceptar
+          </button>
         </div>
       </div>
     </div>
@@ -155,8 +170,11 @@ export default function Entrenamiento({ clubId }) {
             <button
               key={key}
               onClick={() => setFoco(key)}
-              className={`rounded-lg border-2 px-3 py-3 text-left transition-all
-                ${foco === key ? 'border-rugby-green bg-rugby-green/20' : 'border-gray-700 bg-gray-800/40 hover:border-gray-500'}`}
+              className="rounded-xl px-3 py-3 text-left transition-all"
+              style={foco === key
+                ? { background: 'rgba(232,23,44,0.08)', border: '2px solid rgba(232,23,44,0.4)' }
+                : { background: '#0D0D14', border: '2px solid #1E1E32' }
+              }
             >
               <div className="flex items-center gap-2 mb-1">
                 <span>{f.icon}</span>
@@ -220,7 +238,8 @@ export default function Entrenamiento({ clubId }) {
           <button
             onClick={handleEntrenar}
             disabled={entrenando || seleccionados.size === 0 || !foco || !puedePagar}
-            className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
+            style={{ background: '#E8172C' }}
           >
             {entrenando ? 'Entrenando...' : 'Entrenar'}
           </button>

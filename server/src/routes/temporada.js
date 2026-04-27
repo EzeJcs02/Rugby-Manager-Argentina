@@ -260,9 +260,11 @@ router.post('/finalizar', async (_req, res) => {
 
     // Envejecer jugadores y retirar mayores de 38
     const jugadores = await prisma.jugador.findMany();
+    let retirados = 0;
     for (const j of jugadores) {
       if (j.edad >= 38) {
         await prisma.jugador.update({ where: { id: j.id }, data: { clubId: null } });
+        retirados++;
       } else {
         const decaimiento = j.edad >= 32 ? { motor: Math.max(j.motor - 1, 40), velocidad: Math.max(j.velocidad - 1, 40) } : {};
         await prisma.jugador.update({ where: { id: j.id }, data: { edad: j.edad + 1, moral: 75, lesionadoHasta: null, convocadoHasta: null, ...decaimiento } });
@@ -272,8 +274,10 @@ router.post('/finalizar', async (_req, res) => {
     // Generar juveniles para cada club
     const clubs = await prisma.club.findMany();
     const POSICIONES_JUVENILES = ['Pilar Izq','Hooker','Pilar Der','Segunda Línea','Ala','Medio Scrum','Apertura','Wing','Centro','Fullback'];
+    let juvenilesCreados = 0;
     for (const club of clubs) {
       const cantidad = Math.floor(Math.random() * 3) + 2;
+      juvenilesCreados += cantidad;
       for (let i = 0; i < cantidad; i++) {
         const pos = POSICIONES_JUVENILES[Math.floor(Math.random() * POSICIONES_JUVENILES.length)];
         const base = Math.floor(Math.random() * 15) + 55;
@@ -323,7 +327,7 @@ router.post('/finalizar', async (_req, res) => {
       }
     }
 
-    res.json({ mensaje: `Temporada ${nuevaTemporada.nombre} iniciada`, temporada: nuevaTemporada });
+    res.json({ mensaje: `Temporada ${nuevaTemporada.nombre} iniciada`, temporada: nuevaTemporada, retirados, juvenilesCreados });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

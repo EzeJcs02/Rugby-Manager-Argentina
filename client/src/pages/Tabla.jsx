@@ -45,20 +45,24 @@ export default function Tabla({ clubId }) {
               return (
                 <tr
                   key={row.club.id}
-                  className={`transition-colors ${esMiClub ? 'bg-rugby-green/10' : 'hover:bg-gray-800/40'}`}
+                  style={{ background: esMiClub ? 'rgba(232,23,44,0.06)' : 'transparent' }}
                 >
                   <td className="py-3 pl-2">
-                    <span className={`font-bold ${i === 0 ? 'text-rugby-gold' : i <= 3 ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <span className="font-bold" style={{ color: i === 0 ? '#E8C000' : i <= 3 ? '#D1D5DB' : '#4B5563' }}>
                       {i + 1}
                     </span>
                   </td>
                   <td className="py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: row.club.color1 }} />
-                      <span className={`font-medium ${esMiClub ? 'text-rugby-green' : 'text-white'}`}>
+                      <span className="font-medium" style={{ color: esMiClub ? '#E8172C' : '#FFFFFF' }}>
                         {row.club.nombre}
                       </span>
-                      {esMiClub && <span className="text-xs badge bg-rugby-green/20 text-rugby-green">Mi club</span>}
+                      {esMiClub && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(232,23,44,0.15)', color: '#E8172C' }}>
+                          Mi club
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="py-3 text-center text-gray-400">{row.pj}</td>
@@ -72,7 +76,7 @@ export default function Tabla({ clubId }) {
                   </td>
                   <td className="py-3 text-center text-gray-500">{row.bonusTry}</td>
                   <td className="py-3 text-center text-gray-500">{row.bonusDerrota}</td>
-                  <td className="py-3 text-center font-black text-lg text-rugby-green">{row.puntos}</td>
+                  <td className="py-3 text-center font-black text-lg" style={{ color: esMiClub ? '#E8172C' : '#FFFFFF' }}>{row.puntos}</td>
                 </tr>
               );
             })}

@@ -1,22 +1,23 @@
 import { useEffect, useState, useRef } from 'react';
 import { getJornadas, getJornada, simularJornada, simularPartido, finalizarTemporada, getCopa, iniciarCopa, crearFinal } from '../api/client.js';
+import { ClubShield } from '../components/Layout.jsx';
 
-const TIPO_ICON = { try: '🏉', penal: '🎯', drop: '🦵' };
-const TIPO_LABEL = { try: 'Try', penal: 'Penal', drop: 'Drop Goal' };
+const TIPO_ICON  = { try: '🏉', penal: '🎯', drop: '🦵' };
+const TIPO_LABEL = { try: 'Try', penal: 'Penal', drop: 'Drop' };
 
-// ─── Animación de partido ─────────────────────────────────────────────────────
+// ─── Animación de partido ──────────────────────────────────────────────────────
 function MatchAnimation({ resultado, partido, onClose }) {
   const [eventosVisibles, setEventosVisibles] = useState([]);
-  const [indice, setIndice] = useState(0);
+  const [indice, setIndice]   = useState(0);
   const [terminado, setTerminado] = useState(false);
   const intervalRef = useRef(null);
 
-  const local = partido.clubLocal;
+  const local     = partido.clubLocal;
   const visitante = partido.clubVisitante;
-  const eventos = resultado.eventos ?? [];
+  const eventos   = resultado.eventos ?? [];
 
   const ptsLocal = () => eventosVisibles.filter(e => e.equipo === 'local').reduce((s, e) => s + e.puntos, 0);
-  const ptsVis = () => eventosVisibles.filter(e => e.equipo === 'visitante').reduce((s, e) => s + e.puntos, 0);
+  const ptsVis   = () => eventosVisibles.filter(e => e.equipo === 'visitante').reduce((s, e) => s + e.puntos, 0);
 
   useEffect(() => {
     if (eventos.length === 0) { setTerminado(true); return; }
@@ -26,80 +27,134 @@ function MatchAnimation({ resultado, partido, onClose }) {
         setEventosVisibles(ev => [...ev, eventos[prev]]);
         return prev + 1;
       });
-    }, 600);
+    }, 550);
     return () => clearInterval(intervalRef.current);
   }, []);
 
   const scoreLocal = terminado ? resultado.puntosLocal : ptsLocal();
-  const scoreVis = terminado ? resultado.puntosVisitante : ptsVis();
+  const scoreVis   = terminado ? resultado.puntosVisitante : ptsVis();
+  const ganadorLocal = scoreLocal > scoreVis;
+  const ganadorVis   = scoreVis > scoreLocal;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={terminado ? onClose : undefined}>
-      <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]"
-        onClick={e => e.stopPropagation()}>
-        <div className="px-6 py-5 border-b border-gray-700 text-center"
-          style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={terminado ? onClose : undefined}>
+      <div
+        className="w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden rounded-2xl"
+        style={{ background: '#0D0D14', border: '1px solid #1E1E32' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Header ── */}
+        <div
+          className="px-5 py-5 flex-shrink-0"
+          style={{
+            background: `linear-gradient(105deg, ${local.color1}22 0%, #0D0D14 40%, ${visitante.color1}22 100%)`,
+            borderBottom: '1px solid #1E1E32',
+          }}
+        >
           {resultado.esCopa && (
-            <p className="text-rugby-gold text-xs font-bold uppercase tracking-widest mb-2">
-              🏆 {resultado.tipo === 'final' ? 'FINAL Super Rugby Americas' : 'Semifinal Super Rugby Americas'}
+            <p className="text-center text-[11px] font-black uppercase tracking-[0.25em] mb-3" style={{ color: '#E8C000' }}>
+              🏆 {resultado.tipo === 'final' ? 'Final Super Rugby Americas' : 'Semifinal Super Rugby Americas'}
             </p>
           )}
-          <div className="flex items-center justify-center gap-6">
-            <div className="flex-1 text-right">
-              <p className="text-white font-bold text-sm">{local.nombre}</p>
-              <div className="w-3 h-3 rounded-full ml-auto mt-1" style={{ background: local.color1 }} />
+
+          <div className="flex items-center justify-center gap-4">
+            {/* Local */}
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <ClubShield club={local} size={56} />
+              <p className="text-white font-bold text-xs uppercase tracking-tight text-center leading-tight">{local.nombre}</p>
             </div>
-            <div className="text-center px-4">
+
+            {/* Score */}
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
               <div className="flex items-center gap-3">
-                <span className={`text-4xl font-black ${scoreLocal > scoreVis ? 'text-rugby-green' : 'text-white'}`}>{scoreLocal}</span>
-                <span className="text-gray-600">–</span>
-                <span className={`text-4xl font-black ${scoreVis > scoreLocal ? 'text-rugby-green' : 'text-white'}`}>{scoreVis}</span>
+                <span
+                  className="text-5xl font-black tabular-nums"
+                  style={{ color: ganadorLocal ? '#E8172C' : '#FFFFFF' }}
+                >{scoreLocal}</span>
+                <span className="text-2xl font-black" style={{ color: '#2A2A3E' }}>–</span>
+                <span
+                  className="text-5xl font-black tabular-nums"
+                  style={{ color: ganadorVis ? '#E8172C' : '#FFFFFF' }}
+                >{scoreVis}</span>
               </div>
-              {!terminado && (
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  <p className="text-red-400 text-xs font-bold">EN VIVO</p>
+              {!terminado ? (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#E8172C' }} />
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#E8172C' }}>En Vivo</p>
                 </div>
+              ) : (
+                <p className="text-[10px] text-gray-600 uppercase tracking-wider">Final</p>
               )}
-              {terminado && <p className="text-gray-500 text-xs mt-1">Final</p>}
             </div>
-            <div className="flex-1 text-left">
-              <p className="text-white font-bold text-sm">{visitante.nombre}</p>
-              <div className="w-3 h-3 rounded-full mt-1" style={{ background: visitante.color1 }} />
+
+            {/* Visitante */}
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <ClubShield club={visitante} size={56} />
+              <p className="text-white font-bold text-xs uppercase tracking-tight text-center leading-tight">{visitante.nombre}</p>
             </div>
           </div>
         </div>
 
+        {/* ── Eventos ── */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {eventosVisibles.length === 0 && !terminado && (
-            <div className="text-center py-8 text-gray-500 text-sm animate-pulse">Iniciando partido...</div>
-          )}
-          {[...eventosVisibles].reverse().map((ev, i) => (
-            <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${ev.equipo === 'local' ? 'bg-blue-950/50' : 'bg-orange-950/50 flex-row-reverse'}`}>
-              <span className="text-lg">{TIPO_ICON[ev.tipo]}</span>
-              <div className={`flex-1 ${ev.equipo === 'visitante' ? 'text-right' : ''}`}>
-                <p className="text-white font-bold text-sm">{TIPO_LABEL[ev.tipo]}{ev.jugadorNombre ? ` — ${ev.jugadorNombre}` : ''}</p>
-                <p className="text-gray-400 text-xs">Min {ev.minuto}' · +{ev.puntos} pts</p>
-              </div>
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: ev.equipo === 'local' ? local.color1 : visitante.color1 }} />
+            <div className="text-center py-10 text-gray-600 text-xs uppercase tracking-[0.2em] animate-pulse">
+              Iniciando partido...
             </div>
-          ))}
-          {terminado && eventos.length === 0 && <div className="text-center py-6 text-gray-500 text-sm">Sin anotaciones</div>}
+          )}
+          {[...eventosVisibles].reverse().map((ev, i) => {
+            const esLocal = ev.equipo === 'local';
+            const club    = esLocal ? local : visitante;
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ${esLocal ? '' : 'flex-row-reverse'}`}
+                style={{ background: `${club.color1}12`, border: `1px solid ${club.color1}25` }}
+              >
+                <span className="text-base flex-shrink-0">{TIPO_ICON[ev.tipo]}</span>
+                <div className={`flex-1 ${!esLocal ? 'text-right' : ''}`}>
+                  <p className="text-white font-bold text-xs">
+                    {TIPO_LABEL[ev.tipo]}{ev.jugadorNombre ? ` — ${ev.jugadorNombre}` : ''}
+                  </p>
+                  <p className="text-gray-600 text-[10px]">Min {ev.minuto}' · +{ev.puntos} pts</p>
+                </div>
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: club.color1 }} />
+              </div>
+            );
+          })}
+          {terminado && eventos.length === 0 && (
+            <div className="text-center py-8 text-gray-600 text-xs">Sin anotaciones registradas</div>
+          )}
         </div>
 
+        {/* ── Campeón ── */}
         {resultado.campeon && (
-          <div className="px-6 py-4 bg-rugby-gold/20 border-t border-rugby-gold/40 text-center">
-            <p className="text-rugby-gold font-bold text-lg">🏆 ¡{resultado.campeon.nombre} CAMPEÓN!</p>
-            <p className="text-gray-300 text-sm mt-0.5">Premio: $500.000 acreditados al club</p>
+          <div
+            className="px-6 py-4 text-center flex-shrink-0"
+            style={{ background: 'rgba(232,192,0,0.1)', borderTop: '1px solid rgba(232,192,0,0.3)' }}
+          >
+            <p className="text-2xl mb-1">🏆</p>
+            <p className="font-black text-lg" style={{ color: '#E8C000' }}>{resultado.campeon.nombre}</p>
+            <p className="text-gray-400 text-xs mt-0.5">Campeón del Super Rugby Americas · Premio $500k</p>
           </div>
         )}
 
-        <div className="px-6 py-4 border-t border-gray-700">
+        {/* ── Acciones ── */}
+        <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: '1px solid #1E1E32' }}>
           {terminado ? (
-            <button onClick={onClose} className="btn-primary w-full">Continuar</button>
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider transition-all hover:opacity-90"
+              style={{ background: '#E8172C' }}
+            >
+              Continuar
+            </button>
           ) : (
-            <button onClick={() => { clearInterval(intervalRef.current); setEventosVisibles(eventos); setTerminado(true); }}
-              className="w-full px-4 py-2 rounded-lg bg-gray-800 text-gray-400 hover:text-white text-sm transition-colors">
+            <button
+              onClick={() => { clearInterval(intervalRef.current); setEventosVisibles(eventos); setTerminado(true); }}
+              className="w-full py-2.5 rounded-xl text-gray-500 hover:text-gray-300 text-sm transition-colors"
+              style={{ background: '#12121F' }}
+            >
               Saltar animación
             </button>
           )}
@@ -109,60 +164,135 @@ function MatchAnimation({ resultado, partido, onClose }) {
   );
 }
 
-// ─── Modal finalizar temporada ────────────────────────────────────────────────
+// ─── Modal confirmar finalizar ─────────────────────────────────────────────────
 function FinalizarModal({ onConfirm, onClose, loading }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-sm p-6 shadow-2xl">
-        <h3 className="text-white font-bold text-xl mb-2">Finalizar Temporada</h3>
-        <p className="text-gray-400 text-sm mb-5">
-          Los jugadores envejecerán, los mayores de 38 se retirarán, surgirán juveniles y se generará el fixture de la próxima temporada.
-        </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+      <div
+        className="w-full max-w-sm p-6 rounded-2xl shadow-2xl"
+        style={{ background: '#12121F', border: '1px solid #1E1E32' }}
+      >
+        <div className="text-center mb-5">
+          <p className="text-3xl mb-3">🏁</p>
+          <h3 className="text-white font-black text-xl uppercase tracking-tight">Finalizar Temporada</h3>
+          <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+            Los jugadores envejecerán, los retirados (38+) dejarán sus clubes, surgirán juveniles y se generará el fixture de la próxima temporada.
+          </p>
+        </div>
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm transition-colors">Cancelar</button>
-          <button onClick={onConfirm} disabled={loading} className="flex-1 btn-primary">{loading ? 'Procesando...' : 'Confirmar'}</button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl text-gray-400 hover:text-white text-sm font-medium transition-colors"
+            style={{ background: '#1E1E32' }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 px-4 py-2.5 rounded-xl text-white font-bold text-sm uppercase tracking-wider disabled:opacity-50 transition-opacity"
+            style={{ background: '#E8172C' }}
+          >
+            {loading ? 'Procesando...' : 'Confirmar'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Partido card ─────────────────────────────────────────────────────────────
-function PartidoCard({ partido, onSimular, loading }) {
-  const local = partido.clubLocal;
-  const visitante = partido.clubVisitante;
+// ─── Pantalla de nueva temporada ───────────────────────────────────────────────
+function NuevaTemporadaScreen({ data, onClose }) {
   return (
-    <div className={`card transition-all ${partido.jugado ? 'opacity-90' : ''}`}>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1 text-right">
-          <p className="font-bold text-white text-sm">{local.nombre}</p>
-          <div className="flex items-center justify-end gap-1 mt-0.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ background: local.color1 }} />
-          </div>
+    <div
+      className="rounded-2xl p-6 text-center space-y-4"
+      style={{ background: 'linear-gradient(135deg, #0D1F18 0%, #12121F 100%)', border: '1px solid #2D6A4F' }}
+    >
+      <p className="text-4xl">🎉</p>
+      <div>
+        <p className="text-white font-black text-2xl uppercase tracking-tight">{data.temporada?.nombre ?? 'Nueva Temporada'}</p>
+        <p className="text-gray-400 text-sm mt-1">La temporada ha comenzado</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-center">
+        <div className="rounded-xl py-3 px-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1E1E32' }}>
+          <p className="text-white font-black text-2xl">{data.retirados ?? 0}</p>
+          <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">Retirados</p>
         </div>
-        <div className="flex-shrink-0 text-center">
-          {partido.jugado ? (
-            <div className="flex items-center gap-2">
-              <span className={`text-xl font-black ${partido.puntosLocal > partido.puntosVisitante ? 'text-rugby-green' : 'text-white'}`}>{partido.puntosLocal}</span>
-              <span className="text-gray-600 text-sm">–</span>
-              <span className={`text-xl font-black ${partido.puntosVisitante > partido.puntosLocal ? 'text-rugby-green' : 'text-white'}`}>{partido.puntosVisitante}</span>
-            </div>
-          ) : (
-            <span className="text-gray-600 text-sm font-medium">vs</span>
-          )}
-          {partido.jugado && <p className="text-xs text-gray-600 mt-0.5">{partido.triesLocal}T – {partido.triesVisitante}T</p>}
-        </div>
-        <div className="flex-1 text-left">
-          <p className="font-bold text-white text-sm">{visitante.nombre}</p>
-          <div className="flex items-center gap-1 mt-0.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ background: visitante.color1 }} />
-          </div>
+        <div className="rounded-xl py-3 px-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1E1E32' }}>
+          <p className="text-white font-black text-2xl">{data.juvenilesCreados ?? 0}</p>
+          <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">Juveniles</p>
         </div>
       </div>
+      <button
+        onClick={onClose}
+        className="w-full py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider transition-opacity hover:opacity-90"
+        style={{ background: '#2D6A4F' }}
+      >
+        Ir a la nueva temporada →
+      </button>
+    </div>
+  );
+}
+
+// ─── Partido card ──────────────────────────────────────────────────────────────
+function PartidoCard({ partido, onSimular, loading, clubId }) {
+  const local     = partido.clubLocal;
+  const visitante = partido.clubVisitante;
+  const esNuestro = partido.clubLocalId === clubId || partido.clubVisitanteId === clubId;
+
+  return (
+    <div
+      className="rounded-xl p-4 transition-all"
+      style={{
+        background: esNuestro ? `${local.color1}0A` : '#12121F',
+        border: `1px solid ${esNuestro ? local.color1 + '30' : '#1E1E32'}`,
+      }}
+    >
+      <div className="flex items-center gap-3">
+        {/* Local */}
+        <div className="flex flex-col items-center gap-1.5 flex-1">
+          <ClubShield club={local} size={40} />
+          <p className="text-white font-bold text-xs text-center leading-tight truncate w-full text-center">{local.nombre}</p>
+        </div>
+
+        {/* Score / vs */}
+        <div className="flex-shrink-0 text-center px-2">
+          {partido.jugado ? (
+            <div className="flex items-center gap-2">
+              <span
+                className="text-2xl font-black tabular-nums"
+                style={{ color: partido.puntosLocal > partido.puntosVisitante ? '#E8172C' : '#FFFFFF' }}
+              >{partido.puntosLocal}</span>
+              <span className="text-gray-700">–</span>
+              <span
+                className="text-2xl font-black tabular-nums"
+                style={{ color: partido.puntosVisitante > partido.puntosLocal ? '#E8172C' : '#FFFFFF' }}
+              >{partido.puntosVisitante}</span>
+            </div>
+          ) : (
+            <span className="text-gray-600 font-bold text-sm">VS</span>
+          )}
+          {partido.jugado && (
+            <p className="text-[10px] text-gray-600 mt-0.5">{partido.triesLocal}T – {partido.triesVisitante}T</p>
+          )}
+        </div>
+
+        {/* Visitante */}
+        <div className="flex flex-col items-center gap-1.5 flex-1">
+          <ClubShield club={visitante} size={40} />
+          <p className="text-white font-bold text-xs text-center leading-tight truncate w-full text-center">{visitante.nombre}</p>
+        </div>
+      </div>
+
       {!partido.jugado && (
         <div className="mt-3 flex justify-center">
-          <button onClick={() => onSimular(partido.id)} disabled={loading} className="btn-primary text-xs py-1.5 px-4">
-            {loading ? 'Simulando...' : 'Simular este partido'}
+          <button
+            onClick={() => onSimular(partido.id)}
+            disabled={loading}
+            className="px-6 py-2 rounded-lg font-bold text-xs text-white uppercase tracking-wider disabled:opacity-50 transition-opacity hover:opacity-90"
+            style={{ background: '#E8172C' }}
+          >
+            {loading ? 'Simulando...' : 'Simular'}
           </button>
         </div>
       )}
@@ -170,28 +300,26 @@ function PartidoCard({ partido, onSimular, loading }) {
   );
 }
 
-// ─── Tab Liga ─────────────────────────────────────────────────────────────────
+// ─── Tab Liga ──────────────────────────────────────────────────────────────────
 function TabLiga({ clubId }) {
-  const [jornadas, setJornadas] = useState([]);
+  const [jornadas, setJornadas]     = useState([]);
   const [jornadaActual, setJornadaActual] = useState(null);
-  const [partidos, setPartidos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [simulando, setSimulando] = useState(false);
+  const [partidos, setPartidos]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [simulando, setSimulando]   = useState(false);
   const [loadingPartido, setLoadingPartido] = useState(null);
   const [resultados, setResultados] = useState([]);
-  const [animacion, setAnimacion] = useState(null);
+  const [animacion, setAnimacion]   = useState(null);
   const [showFinalizar, setShowFinalizar] = useState(false);
-  const [finalizando, setFinalizando] = useState(false);
+  const [finalizando, setFinalizando]     = useState(false);
   const [temporadaFinalizada, setTemporadaFinalizada] = useState(null);
   const [copaDisponible, setCopaDisponible] = useState(false);
 
-  const cargarJornada = async (num) => { setPartidos(await getJornada(num)); setResultados([]); };
-
+  const cargarJornada  = async (num) => { setPartidos(await getJornada(num)); setResultados([]); };
   const cargarJornadas = async () => {
     const js = await getJornadas();
     setJornadas(js);
-    const todasCompletas = js.length > 0 && js.every(j => j.jugados === j.total);
-    setCopaDisponible(todasCompletas);
+    setCopaDisponible(js.length > 0 && js.every(j => j.jugados === j.total));
     return js;
   };
 
@@ -219,7 +347,7 @@ function TabLiga({ clubId }) {
     setLoadingPartido(id);
     try {
       const res = await simularPartido(id);
-      const p = partidos.find(p => p.id === id);
+      const p   = partidos.find(p => p.id === id);
       setAnimacion({ resultado: res, partido: { ...p, ...res } });
       setPartidos(prev => prev.map(p => p.id === id ? { ...p, ...res, jugado: true } : p));
     } catch (e) { alert(e.response?.data?.error ?? 'Error'); } finally { setLoadingPartido(null); }
@@ -229,8 +357,8 @@ function TabLiga({ clubId }) {
     setFinalizando(true);
     try {
       const res = await finalizarTemporada();
-      setTemporadaFinalizada(res);
       setShowFinalizar(false);
+      setTemporadaFinalizada(res);
       const js = await cargarJornadas();
       const primera = js[0];
       setJornadaActual(primera?.numero ?? 1);
@@ -238,110 +366,170 @@ function TabLiga({ clubId }) {
     } catch (e) { alert(e.response?.data?.error ?? 'Error'); } finally { setFinalizando(false); }
   };
 
-  if (loading) return <div className="text-gray-500 animate-pulse text-center py-12">Cargando...</div>;
+  if (loading) return <div className="text-gray-600 animate-pulse text-center py-16 text-xs uppercase tracking-[0.25em]">Cargando...</div>;
 
-  const jornadaInfo = jornadas.find(j => j.numero === jornadaActual);
-  const todosJugados = jornadaInfo?.jugados === jornadaInfo?.total;
+  const jornadaInfo   = jornadas.find(j => j.numero === jornadaActual);
+  const todosJugados  = jornadaInfo?.jugados === jornadaInfo?.total;
+  const temporadaCompleta = jornadas.length > 0 && jornadas.every(j => j.jugados === j.total);
 
   return (
     <div className="space-y-4">
+
+      {/* ── Nueva temporada iniciada ── */}
       {temporadaFinalizada && (
-        <div className="card border-rugby-gold/50 bg-rugby-gold/10">
-          <p className="font-bold text-rugby-gold">¡Temporada finalizada!</p>
-          <p className="text-gray-300 text-sm mt-1">{temporadaFinalizada.mensaje}</p>
-          <button onClick={() => setTemporadaFinalizada(null)} className="text-xs text-gray-500 mt-2 hover:text-white transition-colors">× Cerrar</button>
+        <NuevaTemporadaScreen data={temporadaFinalizada} onClose={() => setTemporadaFinalizada(null)} />
+      )}
+
+      {/* ── Copa disponible ── */}
+      {copaDisponible && !temporadaCompleta && (
+        <div
+          className="rounded-xl px-4 py-3 flex items-center gap-3"
+          style={{ background: 'rgba(232,192,0,0.07)', border: '1px solid rgba(232,192,0,0.25)' }}
+        >
+          <span className="text-xl">🏆</span>
+          <p className="flex-1 text-xs font-bold text-yellow-300">Liga terminada. ¡Jugá los Playoffs en la pestaña Copa!</p>
         </div>
       )}
 
-      {/* Selector */}
-      <div className="flex gap-2 flex-wrap">
-        {jornadas.map(j => (
-          <button key={j.numero} onClick={() => setJornadaActual(j.numero)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${jornadaActual === j.numero ? 'bg-rugby-green text-white' : j.jugados === j.total ? 'bg-gray-800 text-gray-500' : 'bg-gray-800 text-yellow-400'}`}>
-            J{j.numero}{j.jugados === j.total && <span className="ml-1 text-green-600">✓</span>}
-          </button>
-        ))}
+      {/* ── Selector de jornadas ── */}
+      <div className="flex gap-1.5 flex-wrap">
+        {jornadas.map(j => {
+          const completa = j.jugados === j.total;
+          const activa   = jornadaActual === j.numero;
+          return (
+            <button
+              key={j.numero}
+              onClick={() => setJornadaActual(j.numero)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: activa ? '#E8172C' : completa ? '#0D1F18' : '#12121F',
+                color: activa ? '#fff' : completa ? '#2D6A4F' : '#9CA3AF',
+                border: `1px solid ${activa ? '#E8172C' : completa ? '#2D6A4F40' : '#1E1E32'}`,
+              }}
+            >
+              J{j.numero}{completa && !activa && ' ✓'}
+            </button>
+          );
+        })}
       </div>
 
+      {/* ── Header jornada ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white">Jornada {jornadaActual}</h2>
-          {jornadaInfo && <p className="text-xs text-gray-500">{jornadaInfo.jugados}/{jornadaInfo.total} partidos jugados</p>}
+          <h2 className="text-white font-black text-xl">Jornada {jornadaActual}</h2>
+          {jornadaInfo && (
+            <p className="text-gray-600 text-xs mt-0.5">{jornadaInfo.jugados}/{jornadaInfo.total} partidos jugados</p>
+          )}
         </div>
         {!todosJugados ? (
-          <button onClick={handleSimularJornada} disabled={simulando} className="btn-primary">
-            {simulando ? '⏳ Simulando...' : '▶ Simular jornada'}
+          <button
+            onClick={handleSimularJornada}
+            disabled={simulando}
+            className="px-5 py-2 rounded-xl font-bold text-sm text-white uppercase tracking-wider disabled:opacity-50 transition-opacity hover:opacity-90"
+            style={{ background: '#E8172C' }}
+          >
+            {simulando ? '⏳ Simulando...' : '▶ Simular Jornada'}
           </button>
         ) : (
-          <span className="badge bg-green-900 text-green-300">Jornada completada</span>
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.15em] px-3 py-1.5 rounded-lg"
+            style={{ background: '#0D1F18', color: '#2D6A4F', border: '1px solid #2D6A4F40' }}
+          >
+            Completada ✓
+          </span>
         )}
       </div>
 
+      {/* ── Partidos ── */}
       <div className="space-y-3">
         {partidos.map(p => (
-          <PartidoCard key={p.id} partido={p} onSimular={handleSimularPartido} loading={loadingPartido === p.id} />
+          <PartidoCard
+            key={p.id}
+            partido={p}
+            clubId={clubId}
+            onSimular={handleSimularPartido}
+            loading={loadingPartido === p.id}
+          />
         ))}
       </div>
 
+      {/* ── Resultados de jornada simulada ── */}
       {resultados.length > 0 && (
-        <div className="card border-rugby-green/40">
-          <h3 className="font-bold text-white mb-3">Resultados</h3>
-          <div className="space-y-2">
-            {resultados.map(r => (
-              <div key={r.id}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className={r.puntosLocal >= r.puntosVisitante ? 'text-rugby-green font-bold' : 'text-gray-400'}>{r.clubLocal.nombre}</span>
-                  <span className="text-white font-bold mx-3">{r.puntosLocal} – {r.puntosVisitante}</span>
-                  <span className={r.puntosVisitante >= r.puntosLocal ? 'text-rugby-green font-bold' : 'text-gray-400'}>{r.clubVisitante.nombre}</span>
-                </div>
-                {r.lesionados?.length > 0 && (
-                  <p className="text-xs text-red-400 mt-0.5 pl-1">🩹 {r.lesionados.map(l => l.jugadorNombre).join(', ')} se lesionaron</p>
-                )}
+        <div className="rounded-xl p-4 space-y-2" style={{ background: '#12121F', border: '1px solid #2D6A4F40' }}>
+          <p className="section-title">Resultados</p>
+          {resultados.map(r => (
+            <div key={r.id} className="space-y-0.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className={r.puntosLocal >= r.puntosVisitante ? 'text-white font-bold' : 'text-gray-500'}>{r.clubLocal.nombre}</span>
+                <span className="text-white font-black tabular-nums mx-3">{r.puntosLocal} – {r.puntosVisitante}</span>
+                <span className={r.puntosVisitante >= r.puntosLocal ? 'text-white font-bold' : 'text-gray-500'}>{r.clubVisitante.nombre}</span>
               </div>
-            ))}
-          </div>
+              {r.lesionados?.length > 0 && (
+                <p className="text-[10px] text-red-500 pl-1">🩹 {r.lesionados.map(l => l.jugadorNombre).join(', ')}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Finalizar temporada ── */}
+      {temporadaCompleta && !temporadaFinalizada && (
+        <div
+          className="rounded-xl p-4 text-center space-y-3"
+          style={{ background: 'rgba(232,23,44,0.06)', border: '1px solid rgba(232,23,44,0.2)' }}
+        >
+          <p className="text-white font-bold text-sm">Temporada completa (liga + copa)</p>
+          <p className="text-gray-500 text-xs">Podés iniciar la siguiente temporada cuando estés listo.</p>
+          <button
+            onClick={() => setShowFinalizar(true)}
+            className="px-8 py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider transition-opacity hover:opacity-90"
+            style={{ background: '#E8172C' }}
+          >
+            Finalizar Temporada
+          </button>
         </div>
       )}
 
       {animacion && (
-        <MatchAnimation resultado={animacion.resultado} partido={animacion.partido} onClose={async () => { setAnimacion(null); await cargarJornadas(); }} />
+        <MatchAnimation
+          resultado={animacion.resultado}
+          partido={animacion.partido}
+          onClose={async () => { setAnimacion(null); await cargarJornadas(); }}
+        />
       )}
-      {showFinalizar && <FinalizarModal onConfirm={handleFinalizar} onClose={() => setShowFinalizar(false)} loading={finalizando} />}
+      {showFinalizar && (
+        <FinalizarModal onConfirm={handleFinalizar} onClose={() => setShowFinalizar(false)} loading={finalizando} />
+      )}
     </div>
   );
 }
 
-// ─── Tab Copa ─────────────────────────────────────────────────────────────────
+// ─── Tab Copa ──────────────────────────────────────────────────────────────────
 function TabCopa({ clubId }) {
-  const [copa, setCopa] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [accion, setAccion] = useState(null);
+  const [copa, setCopa]   = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [accion, setAccion]     = useState(null);
   const [animacion, setAnimacion] = useState(null);
   const [loadingPartido, setLoadingPartido] = useState(null);
 
-  const cargar = async () => {
-    const data = await getCopa();
-    setCopa(data);
-  };
+  const cargar = async () => { const data = await getCopa(); setCopa(data); };
 
-  useEffect(() => {
-    cargar().finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { cargar().finally(() => setLoading(false)); }, []);
 
-  const jornadas = copa?.partidos ?? [];
-  const semis = jornadas.filter(p => p.tipo === 'semifinal');
-  const final = jornadas.find(p => p.tipo === 'final');
-  const ambasSemisJugadas = semis.length === 2 && semis.every(s => s.jugado);
-  const copaIniciada = semis.length > 0;
+  const jornadas      = copa?.partidos ?? [];
+  const semis         = jornadas.filter(p => p.tipo === 'semifinal');
+  const final         = jornadas.find(p => p.tipo === 'final');
+  const ambasSemis    = semis.length === 2 && semis.every(s => s.jugado);
+  const copaIniciada  = semis.length > 0;
 
-  const handleIniciar = async () => {
+  const handleIniciar     = async () => {
     setAccion('iniciando');
     try { await iniciarCopa(); await cargar(); }
     catch (e) { alert(e.response?.data?.error ?? 'Error'); }
     finally { setAccion(null); }
   };
 
-  const handleCrearFinal = async () => {
+  const handleCrearFinal  = async () => {
     setAccion('final');
     try { await crearFinal(); await cargar(); }
     catch (e) { alert(e.response?.data?.error ?? 'Error'); }
@@ -352,59 +540,77 @@ function TabCopa({ clubId }) {
     setLoadingPartido(id);
     try {
       const res = await simularPartido(id);
-      const p = jornadas.find(j => j.id === id);
+      const p   = jornadas.find(j => j.id === id);
       setAnimacion({ resultado: { ...res, esCopa: true, tipo: p?.tipo }, partido: { ...p, ...res } });
       await cargar();
     } catch (e) { alert(e.response?.data?.error ?? 'Error'); }
     finally { setLoadingPartido(null); }
   };
 
-  if (loading) return <div className="text-gray-500 animate-pulse text-center py-12">Cargando...</div>;
+  if (loading) return <div className="text-gray-600 animate-pulse text-center py-16 text-xs uppercase tracking-[0.25em]">Cargando...</div>;
 
   const campeon = copa?.temporada?.campeonNombre;
 
   return (
     <div className="space-y-4">
+      {/* Campeón */}
       {campeon && (
-        <div className="card border-rugby-gold/50 bg-rugby-gold/10 text-center py-5">
-          <p className="text-4xl mb-2">🏆</p>
-          <p className="text-rugby-gold font-bold text-xl">{campeon}</p>
+        <div
+          className="rounded-2xl p-6 text-center"
+          style={{ background: 'rgba(232,192,0,0.08)', border: '1px solid rgba(232,192,0,0.3)' }}
+        >
+          <p className="text-5xl mb-3">🏆</p>
+          <p className="font-black text-2xl" style={{ color: '#E8C000' }}>{campeon}</p>
           <p className="text-gray-400 text-sm mt-1">Campeón del Super Rugby Americas {copa.temporada.anio}</p>
         </div>
       )}
 
+      {/* Iniciar playoffs */}
       {!copaIniciada && !campeon && (
-        <div className="card text-center py-8 space-y-4">
+        <div className="rounded-xl p-6 text-center space-y-4" style={{ background: '#12121F', border: '1px solid #1E1E32' }}>
           <p className="text-5xl">🏆</p>
           <div>
-            <p className="text-white font-bold text-lg">Playoffs Super Rugby Americas</p>
-            <p className="text-gray-400 text-sm mt-1">Los 4 primeros de la tabla juegan semifinales y final</p>
+            <p className="text-white font-black text-lg uppercase tracking-tight">Playoffs Super Rugby Americas</p>
+            <p className="text-gray-500 text-sm mt-1">Los 4 mejores de la tabla juegan semifinales y final</p>
           </div>
-          <button onClick={handleIniciar} disabled={accion === 'iniciando'} className="btn-primary mx-auto">
+          <button
+            onClick={handleIniciar}
+            disabled={accion === 'iniciando'}
+            className="px-8 py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider disabled:opacity-50"
+            style={{ background: '#E8172C' }}
+          >
             {accion === 'iniciando' ? 'Iniciando...' : 'Iniciar Playoffs'}
           </button>
         </div>
       )}
 
+      {/* Semifinales */}
       {semis.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Semifinales</h2>
+          <p className="section-title">Semifinales</p>
           {semis.map(p => (
-            <PartidoCard key={p.id} partido={p} onSimular={handleSimular} loading={loadingPartido === p.id} />
+            <PartidoCard key={p.id} partido={p} clubId={clubId} onSimular={handleSimular} loading={loadingPartido === p.id} />
           ))}
         </div>
       )}
 
-      {ambasSemisJugadas && !final && (
-        <button onClick={handleCrearFinal} disabled={accion === 'final'} className="w-full btn-primary">
+      {/* Crear final */}
+      {ambasSemis && !final && (
+        <button
+          onClick={handleCrearFinal}
+          disabled={accion === 'final'}
+          className="w-full py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider disabled:opacity-50"
+          style={{ background: '#E8C000', color: '#000' }}
+        >
           {accion === 'final' ? '...' : '🏆 Crear Final'}
         </button>
       )}
 
+      {/* Final */}
       {final && (
         <div className="space-y-3">
-          <h2 className="text-sm font-bold text-rugby-gold uppercase tracking-wider">🏆 Final</h2>
-          <PartidoCard partido={final} onSimular={handleSimular} loading={loadingPartido === final.id} />
+          <p className="section-title" style={{ color: '#E8C000' }}>🏆 Gran Final</p>
+          <PartidoCard partido={final} clubId={clubId} onSimular={handleSimular} loading={loadingPartido === final.id} />
         </div>
       )}
 
@@ -415,17 +621,16 @@ function TabCopa({ clubId }) {
   );
 }
 
-// ─── Tab Fixture completo ──────────────────────────────────────────────────────
+// ─── Tab Fixture ───────────────────────────────────────────────────────────────
 function TabFixture({ clubId }) {
-  const [jornadas, setJornadas] = useState([]);
-  const [detalles, setDetalles] = useState({});
+  const [jornadas, setJornadas]   = useState([]);
+  const [detalles, setDetalles]   = useState({});
   const [expandida, setExpandida] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
-    getJornadas().then(async (js) => {
+    getJornadas().then(js => {
       setJornadas(js);
-      // Auto-expand first incomplete
       const activa = js.find(j => j.jugados < j.total) ?? js[js.length - 1];
       if (activa) setExpandida(activa.numero);
     }).finally(() => setLoading(false));
@@ -433,7 +638,6 @@ function TabFixture({ clubId }) {
 
   const cargarDetalle = async (num) => {
     if (detalles[num]) return;
-    const { getJornada } = await import('../api/client.js');
     const ps = await getJornada(num);
     setDetalles(prev => ({ ...prev, [num]: ps }));
   };
@@ -444,67 +648,92 @@ function TabFixture({ clubId }) {
     cargarDetalle(num);
   };
 
-  if (loading) return <div className="text-gray-500 animate-pulse text-center py-12">Cargando...</div>;
+  if (loading) return <div className="text-gray-600 animate-pulse text-center py-16 text-xs uppercase tracking-[0.25em]">Cargando...</div>;
 
   return (
     <div className="space-y-2">
-      {jornadas.map(j => (
-        <div key={j.numero} className="card">
-          <button
-            onClick={() => toggle(j.numero)}
-            className="w-full flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <span className="font-bold text-white">Jornada {j.numero}</span>
-              <span className={`badge text-xs ${j.jugados === j.total ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'}`}>
-                {j.jugados}/{j.total}
-              </span>
-            </div>
-            <span className="text-gray-600">{expandida === j.numero ? '▲' : '▼'}</span>
-          </button>
+      {jornadas.map(j => {
+        const completa = j.jugados === j.total;
+        const abierta  = expandida === j.numero;
+        return (
+          <div key={j.numero} className="rounded-xl overflow-hidden" style={{ background: '#12121F', border: '1px solid #1E1E32' }}>
+            <button onClick={() => toggle(j.numero)} className="w-full flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-white text-sm">Jornada {j.numero}</span>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{
+                    background: completa ? '#0D1F18' : '#1E1A00',
+                    color: completa ? '#2D6A4F' : '#A0800A',
+                  }}
+                >
+                  {j.jugados}/{j.total}
+                </span>
+              </div>
+              <span className="text-gray-600 text-xs">{abierta ? '▲' : '▼'}</span>
+            </button>
 
-          {expandida === j.numero && (
-            <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
-              {detalles[j.numero] ? detalles[j.numero].map(p => (
-                <div key={p.id} className={`flex items-center gap-2 text-sm px-1 ${p.clubLocalId === clubId || p.clubVisitanteId === clubId ? 'text-rugby-green font-semibold' : 'text-gray-300'}`}>
-                  <div className="flex-1 text-right truncate">{p.clubLocal.nombre}</div>
-                  <div className="text-center flex-shrink-0 w-20">
-                    {p.jugado
-                      ? <span className="font-bold">{p.puntosLocal} – {p.puntosVisitante}</span>
-                      : <span className="text-gray-600 text-xs">vs</span>}
-                  </div>
-                  <div className="flex-1 text-left truncate">{p.clubVisitante.nombre}</div>
-                </div>
-              )) : <p className="text-gray-600 text-sm text-center">Cargando...</p>}
-            </div>
-          )}
-        </div>
-      ))}
+            {abierta && (
+              <div className="px-4 pb-3 pt-1 space-y-1.5" style={{ borderTop: '1px solid #1E1E32' }}>
+                {detalles[j.numero] ? detalles[j.numero].map(p => {
+                  const esNuestro = p.clubLocalId === clubId || p.clubVisitanteId === clubId;
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
+                      style={{ background: esNuestro ? 'rgba(232,23,44,0.06)' : 'transparent' }}
+                    >
+                      <div className="flex-1 text-right truncate" style={{ color: esNuestro ? '#fff' : '#9CA3AF' }}>
+                        {p.clubLocal.nombre}
+                      </div>
+                      <div className="text-center flex-shrink-0 w-20">
+                        {p.jugado
+                          ? <span className="font-black text-white">{p.puntosLocal} – {p.puntosVisitante}</span>
+                          : <span className="text-gray-700">vs</span>}
+                      </div>
+                      <div className="flex-1 truncate" style={{ color: esNuestro ? '#fff' : '#9CA3AF' }}>
+                        {p.clubVisitante.nombre}
+                      </div>
+                    </div>
+                  );
+                }) : <p className="text-gray-600 text-xs text-center py-3">Cargando...</p>}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+// ─── Página principal ──────────────────────────────────────────────────────────
 export default function Jornada({ clubId }) {
   const [tab, setTab] = useState('liga');
 
   const tabs = [
-    { id: 'liga',    label: '🏉 Liga' },
-    { id: 'copa',    label: '🏆 Copa' },
-    { id: 'fixture', label: '📅 Fixture' },
+    { id: 'liga',    label: 'Liga' },
+    { id: 'copa',    label: 'Copa' },
+    { id: 'fixture', label: 'Fixture' },
   ];
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Jornadas</h1>
-      </div>
-
-      <div className="flex gap-2">
+      {/* Tabs */}
+      <div className="flex gap-1" style={{ borderBottom: '1px solid #1E1E32', paddingBottom: 0 }}>
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.id ? 'bg-rugby-green text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}>
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className="relative px-5 py-2.5 text-sm font-bold transition-colors"
+            style={{ color: tab === t.id ? '#FFFFFF' : '#4B5563' }}
+          >
             {t.label}
+            {tab === t.id && (
+              <div
+                className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full"
+                style={{ background: '#E8172C' }}
+              />
+            )}
           </button>
         ))}
       </div>

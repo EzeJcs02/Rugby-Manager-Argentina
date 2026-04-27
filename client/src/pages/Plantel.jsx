@@ -54,7 +54,11 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
   return (
     <div>
       <div
-        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${selected ? 'bg-rugby-green/20 border border-rugby-green/40' : 'hover:bg-gray-800'}`}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all"
+        style={selected
+          ? { background: 'rgba(232,23,44,0.08)', border: '1px solid rgba(232,23,44,0.25)' }
+          : { background: 'transparent', border: '1px solid transparent' }
+        }
         onClick={() => onSelect(selected ? null : j.id)}
       >
         <span className="w-6 text-center text-xs text-gray-500 font-mono">{j.numero ?? '–'}</span>
@@ -84,7 +88,7 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
       </div>
 
       {selected && (
-        <div className="mx-3 mb-2 p-3 bg-gray-900 rounded-b-lg border border-t-0 border-gray-800">
+        <div className="mx-3 mb-2 p-3 rounded-b-lg" style={{ background: '#0D0D14', border: '1px solid #1E1E32', borderTop: 'none' }}>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
             {ATTRS.map(({ key, label }) => (
               <div key={key} className="flex items-center gap-2">
@@ -96,7 +100,7 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
               </div>
             ))}
           </div>
-          <div className="mt-2 pt-2 border-t border-gray-800 flex items-center justify-between gap-4 text-xs text-gray-500">
+          <div className="mt-2 pt-2 border-t border-gray-800/50 flex items-center justify-between gap-4 text-xs text-gray-500">
             <div className="flex gap-4 flex-wrap">
               <span>Valor: <span className="text-white">${(j.valor / 1000).toFixed(0)}k</span></span>
               <span>Salario: <span className="text-yellow-400">${Math.round(j.valor / 200).toLocaleString('es-AR')}/j</span></span>
@@ -106,11 +110,11 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); onToggleVenta(j.id); }}
-              className={`text-xs px-2 py-1 rounded transition-colors ${
-                j.enVenta
-                  ? 'bg-yellow-900/50 text-yellow-300 hover:bg-yellow-900'
-                  : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-              }`}
+              className="text-xs px-2 py-1 rounded-lg transition-colors font-medium"
+              style={j.enVenta
+                ? { background: 'rgba(234,179,8,0.12)', color: '#FCD34D', border: '1px solid rgba(234,179,8,0.3)' }
+                : { background: '#1E1E32', color: '#6B7280', border: '1px solid transparent' }
+              }
             >
               {j.enVenta ? 'Quitar del mercado' : 'Poner en venta'}
             </button>
@@ -124,8 +128,9 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
 function ComparadorModal({ j1, j2, onClose }) {
   const attrs = ATTRS;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
-      <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-xl shadow-2xl p-5"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
+      <div className="w-full max-w-xl shadow-2xl p-5 rounded-2xl"
+        style={{ background: '#12121F', border: '1px solid #1E1E32' }}
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-white">Comparar jugadores</h3>
@@ -153,13 +158,13 @@ function ComparadorModal({ j1, j2, onClose }) {
                 <div className="flex items-center gap-2 justify-end">
                   <span className={`text-xs font-bold w-6 text-right ${attrColor(v1)}`}>{v1}</span>
                   <div className="flex-1 stat-bar-bg" style={{ maxWidth: 80 }}>
-                    <div className={`stat-bar ${v1 >= v2 ? 'bg-rugby-green' : 'bg-gray-600'}`} style={{ width: `${(v1 / 99) * 100}%` }} />
+                    <div className={`stat-bar ${v1 >= v2 ? '' : 'bg-gray-700'}`} style={{ width: `${(v1 / 99) * 100}%`, background: v1 >= v2 ? '#E8172C' : undefined }} />
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 text-center">{label}</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 stat-bar-bg" style={{ maxWidth: 80 }}>
-                    <div className={`stat-bar ${v2 >= v1 ? 'bg-rugby-green' : 'bg-gray-600'}`} style={{ width: `${(v2 / 99) * 100}%` }} />
+                    <div className={`stat-bar ${v2 >= v1 ? '' : 'bg-gray-700'}`} style={{ width: `${(v2 / 99) * 100}%`, background: v2 >= v1 ? '#E8172C' : undefined }} />
                   </div>
                   <span className={`text-xs font-bold w-6 ${attrColor(v2)}`}>{v2}</span>
                 </div>
@@ -239,7 +244,11 @@ export default function Plantel({ clubId }) {
           <button
             key={p}
             onClick={() => setFiltro(p)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filtro === p ? 'bg-rugby-green text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+            className="px-3 py-1 rounded-full text-xs font-medium transition-all"
+            style={filtro === p
+              ? { background: '#E8172C', color: '#fff' }
+              : { background: '#12121F', color: '#6B7280', border: '1px solid #1E1E32' }
+            }
           >
             {p}
           </button>
@@ -270,7 +279,7 @@ export default function Plantel({ clubId }) {
       </div>
 
       {comparando && !selected && (
-        <div className="card border-gray-600 bg-gray-800/50">
+        <div className="card" style={{ borderColor: '#2A2A3E' }}>
           <p className="text-sm text-gray-400 mb-2">
             Seleccioná un jugador para comparar con <span className="text-white font-bold">{jugadores.find(j => j.id === comparando)?.apellido}</span>
           </p>
