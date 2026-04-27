@@ -266,7 +266,7 @@ router.post('/finalizar', async (_req, res) => {
 
     // Nueva temporada con fixture
     const nuevaTemporada = await prisma.temporada.create({
-      data: { nombre: `Torneo de la URBA ${temporadaActual.anio + 1}`, anio: temporadaActual.anio + 1, activa: true },
+      data: { nombre: `Super Rugby Americas ${temporadaActual.anio + 1}`, anio: temporadaActual.anio + 1, activa: true },
     });
 
     const ids = clubs.map(c => c.id);

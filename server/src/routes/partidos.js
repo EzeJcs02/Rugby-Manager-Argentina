@@ -162,7 +162,7 @@ router.post('/:id/simular', async (req, res) => {
       // Bonus presupuesto al campeón
       await prisma.club.update({ where: { id: campeonId }, data: { presupuesto: { increment: 500000 } } });
       // Noticia
-      await prisma.noticia.create({ data: { clubId: campeonId, tipo: 'sponsor', texto: `¡CAMPEONES DE LA COPA URBA! Premio de $500.000 acreditado al club.` } });
+      await prisma.noticia.create({ data: { clubId: campeonId, tipo: 'sponsor', texto: `¡CAMPEONES DEL SUPER RUGBY AMERICAS! Premio de $500.000 acreditado al club.` } });
       campeon = campeonClub;
     }
 

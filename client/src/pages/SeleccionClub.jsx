@@ -55,7 +55,7 @@ export default function SeleccionClub({ onSelect }) {
         </div>
       )}
 
-      <p className="text-gray-700 text-xs mt-10">Torneo de la URBA 2025</p>
+      <p className="text-gray-700 text-xs mt-10">Super Rugby Americas 2025</p>
     </div>
   );
 }

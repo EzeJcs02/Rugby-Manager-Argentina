@@ -41,7 +41,7 @@ function MatchAnimation({ resultado, partido, onClose }) {
           style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
           {resultado.esCopa && (
             <p className="text-rugby-gold text-xs font-bold uppercase tracking-widest mb-2">
-              🏆 {resultado.tipo === 'final' ? 'FINAL Copa URBA' : 'Semifinal Copa URBA'}
+              🏆 {resultado.tipo === 'final' ? 'FINAL Super Rugby Americas' : 'Semifinal Super Rugby Americas'}
             </p>
           )}
           <div className="flex items-center justify-center gap-6">
@@ -369,7 +369,7 @@ function TabCopa({ clubId }) {
         <div className="card border-rugby-gold/50 bg-rugby-gold/10 text-center py-5">
           <p className="text-4xl mb-2">🏆</p>
           <p className="text-rugby-gold font-bold text-xl">{campeon}</p>
-          <p className="text-gray-400 text-sm mt-1">Campeón de la Copa URBA {copa.temporada.anio}</p>
+          <p className="text-gray-400 text-sm mt-1">Campeón del Super Rugby Americas {copa.temporada.anio}</p>
         </div>
       )}
 
@@ -377,11 +377,11 @@ function TabCopa({ clubId }) {
         <div className="card text-center py-8 space-y-4">
           <p className="text-5xl">🏆</p>
           <div>
-            <p className="text-white font-bold text-lg">Copa URBA</p>
+            <p className="text-white font-bold text-lg">Playoffs Super Rugby Americas</p>
             <p className="text-gray-400 text-sm mt-1">Los 4 primeros de la tabla juegan semifinales y final</p>
           </div>
           <button onClick={handleIniciar} disabled={accion === 'iniciando'} className="btn-primary mx-auto">
-            {accion === 'iniciando' ? 'Iniciando...' : 'Iniciar Copa URBA'}
+            {accion === 'iniciando' ? 'Iniciando...' : 'Iniciar Playoffs'}
           </button>
         </div>
       )}
