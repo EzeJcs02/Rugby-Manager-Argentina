@@ -24,7 +24,7 @@ router.get('/tabla', async (_req, res) => {
 
     const clubs = await prisma.club.findMany();
     const partidos = await prisma.partido.findMany({
-      where: { temporadaId: temporada.id, jugado: true },
+      where: { temporadaId: temporada.id, jugado: true, tipo: 'liga' },
     });
 
     const tabla = clubs.map(club => {
@@ -94,7 +94,7 @@ router.get('/jornadas', async (_req, res) => {
     const temporada = await prisma.temporada.findFirst({ where: { activa: true } });
     if (!temporada) return res.status(404).json({ error: 'No hay temporada activa' });
 
-    const partidos = await prisma.partido.findMany({ where: { temporadaId: temporada.id } });
+    const partidos = await prisma.partido.findMany({ where: { temporadaId: temporada.id, tipo: 'liga' } });
     const jornadas = [...new Set(partidos.map(p => p.jornada))].sort((a, b) => a - b);
     const resumen = jornadas.map(j => ({
       numero: j,
@@ -107,18 +107,116 @@ router.get('/jornadas', async (_req, res) => {
   }
 });
 
+// ─── COPA URBA ────────────────────────────────────────────────────────────────
+
+async function calcularTabla(temporadaId) {
+  const clubs = await prisma.club.findMany();
+  const partidos = await prisma.partido.findMany({ where: { temporadaId, jugado: true, tipo: 'liga' } });
+  const tabla = clubs.map(club => {
+    const pj = partidos.filter(p => p.clubLocalId === club.id || p.clubVisitanteId === club.id);
+    let puntos = 0, pg = 0, pe = 0, pp = 0, pf = 0, pc = 0;
+    for (const p of pj) {
+      const esLocal = p.clubLocalId === club.id;
+      const propios = esLocal ? p.puntosLocal : p.puntosVisitante;
+      const contrarios = esLocal ? p.puntosVisitante : p.puntosLocal;
+      const tries = esLocal ? p.triesLocal : p.triesVisitante;
+      pf += propios; pc += contrarios;
+      if (propios > contrarios) { pg++; puntos += 4; }
+      else if (propios === contrarios) { pe++; puntos += 2; }
+      else { pp++; if (contrarios - propios <= 7) puntos += 1; }
+      if (tries >= 4) puntos += 1;
+    }
+    return { clubId: club.id, nombre: club.nombre, color1: club.color1, puntos, pj: pj.length, pg, pe, pp, pf, pc, dif: pf - pc };
+  });
+  return tabla.sort((a, b) => b.puntos - a.puntos || b.dif - a.dif || b.pf - a.pf);
+}
+
+// GET /api/temporada/copa
+router.get('/copa', async (_req, res) => {
+  try {
+    const temporada = await prisma.temporada.findFirst({ where: { activa: true } });
+    if (!temporada) return res.status(404).json({ error: 'No hay temporada activa' });
+
+    const partidos = await prisma.partido.findMany({
+      where: { temporadaId: temporada.id, tipo: { not: 'liga' } },
+      include: {
+        clubLocal: { select: { id: true, nombre: true, color1: true, color2: true } },
+        clubVisitante: { select: { id: true, nombre: true, color1: true, color2: true } },
+      },
+      orderBy: { id: 'asc' },
+    });
+    res.json({ temporada, partidos });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/temporada/copa/iniciar
+router.post('/copa/iniciar', async (_req, res) => {
+  try {
+    const temporada = await prisma.temporada.findFirst({ where: { activa: true } });
+    if (!temporada) return res.status(404).json({ error: 'No hay temporada activa' });
+
+    const ligaPendientes = await prisma.partido.count({ where: { temporadaId: temporada.id, jugado: false, tipo: 'liga' } });
+    if (ligaPendientes > 0) return res.status(400).json({ error: `Quedan ${ligaPendientes} partidos de liga sin jugar` });
+
+    const copaExistente = await prisma.partido.count({ where: { temporadaId: temporada.id, tipo: { not: 'liga' } } });
+    if (copaExistente > 0) return res.status(400).json({ error: 'La copa ya fue iniciada' });
+
+    const tabla = await calcularTabla(temporada.id);
+    if (tabla.length < 4) return res.status(400).json({ error: 'Se necesitan al menos 4 clubs' });
+
+    const [p1, p2, p3, p4] = tabla;
+    const [sf1, sf2] = await Promise.all([
+      prisma.partido.create({ data: { temporadaId: temporada.id, clubLocalId: p1.clubId, clubVisitanteId: p4.clubId, jornada: 100, tipo: 'semifinal' } }),
+      prisma.partido.create({ data: { temporadaId: temporada.id, clubLocalId: p2.clubId, clubVisitanteId: p3.clubId, jornada: 100, tipo: 'semifinal' } }),
+    ]);
+
+    res.json({ mensaje: 'Copa URBA iniciada', semifinales: [sf1, sf2], clasificados: [p1, p2, p3, p4] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/temporada/copa/crear-final
+router.post('/copa/crear-final', async (_req, res) => {
+  try {
+    const temporada = await prisma.temporada.findFirst({ where: { activa: true } });
+    if (!temporada) return res.status(404).json({ error: 'No hay temporada activa' });
+
+    const semis = await prisma.partido.findMany({ where: { temporadaId: temporada.id, tipo: 'semifinal' } });
+    if (semis.length < 2) return res.status(400).json({ error: 'No hay semifinales creadas' });
+    if (semis.some(s => !s.jugado)) return res.status(400).json({ error: 'Hay semifinales sin jugar' });
+
+    const finalExistente = await prisma.partido.findFirst({ where: { temporadaId: temporada.id, tipo: 'final' } });
+    if (finalExistente) return res.status(400).json({ error: 'La final ya fue creada' });
+
+    const ganadores = semis.map(s =>
+      (s.puntosLocal ?? 0) >= (s.puntosVisitante ?? 0) ? s.clubLocalId : s.clubVisitanteId
+    );
+
+    const final = await prisma.partido.create({
+      data: { temporadaId: temporada.id, clubLocalId: ganadores[0], clubVisitanteId: ganadores[1], jornada: 101, tipo: 'final' },
+      include: {
+        clubLocal: { select: { id: true, nombre: true, color1: true } },
+        clubVisitante: { select: { id: true, nombre: true, color1: true } },
+      },
+    });
+
+    res.json({ mensaje: '¡Final de la Copa URBA creada!', final });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/temporada/finalizar
 router.post('/finalizar', async (_req, res) => {
   try {
     const temporadaActual = await prisma.temporada.findFirst({ where: { activa: true } });
     if (!temporadaActual) return res.status(404).json({ error: 'No hay temporada activa' });
 
-    const pendientes = await prisma.partido.count({
-      where: { temporadaId: temporadaActual.id, jugado: false },
-    });
-    if (pendientes > 0) {
-      return res.status(400).json({ error: `Quedan ${pendientes} partidos sin jugar` });
-    }
+    const pendientes = await prisma.partido.count({ where: { temporadaId: temporadaActual.id, jugado: false } });
+    if (pendientes > 0) return res.status(400).json({ error: `Quedan ${pendientes} partidos sin jugar (incluída la Copa)` });
 
     // Desactivar temporada actual
     await prisma.temporada.update({ where: { id: temporadaActual.id }, data: { activa: false } });

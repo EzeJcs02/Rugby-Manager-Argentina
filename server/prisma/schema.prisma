@@ -75,9 +75,11 @@ model Formacion {
 
 model Temporada {
   id     Int     @id @default(autoincrement())
-  nombre String
-  anio   Int
-  activa Boolean @default(false)
+  nombre        String
+  anio          Int
+  activa        Boolean @default(false)
+  campeonId     Int?
+  campeonNombre String?
 
   partidos Partido[]
 
@@ -93,6 +95,7 @@ model Partido {
   clubVisitanteId Int
   clubVisitante   Club      @relation("Visitante", fields: [clubVisitanteId], references: [id])
   jornada         Int
+  tipo            String    @default("liga")
   jugado          Boolean   @default(false)
   puntosLocal     Int?
   puntosVisitante Int?

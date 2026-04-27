@@ -37,3 +37,9 @@ export const getHistorial = (clubId) => api.get(`/estadisticas/historial/${clubI
 export const getOfertas = (clubId) => api.get(`/transferencias/ofertas/${clubId}`).then(r => r.data);
 export const responderOferta = (id, accion) => api.put(`/transferencias/${id}/responder`, { accion }).then(r => r.data);
 export const toggleVenta = (jugadorId) => api.put(`/transferencias/venta/${jugadorId}`).then(r => r.data);
+
+export const getCopa = () => api.get('/temporada/copa').then(r => r.data);
+export const iniciarCopa = () => api.post('/temporada/copa/iniciar').then(r => r.data);
+export const crearFinal = () => api.post('/temporada/copa/crear-final').then(r => r.data);
+
+export const getFixtureCompleto = () => api.get('/temporada/jornadas').then(r => r.data);

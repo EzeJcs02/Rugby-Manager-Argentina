@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getClubs, getJugadores, getTransferencias, crearTransferencia, getOfertas, responderOferta } from '../api/client.js';
+import { getClubs, getJugadores, getTransferencias, crearTransferencia, getOfertas, responderOferta, getMercado } from '../api/client.js';
 
 const ATTRS = ['scrum','lineout','tackle','velocidad','pase','pie','vision','potencia','motor','liderazgo'];
 function overall(j) { return Math.round(ATTRS.reduce((s, a) => s + j[a], 0) / ATTRS.length); }
@@ -18,17 +18,23 @@ export default function Transferencias({ clubId }) {
   const [clubs, setClubs] = useState([]);
   const [clubSeleccionado, setClubSeleccionado] = useState('');
   const [jugadoresOtroClub, setJugadoresOtroClub] = useState([]);
+  const [libres, setLibres] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [ofertas, setOfertas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [comprando, setComprando] = useState(null);
   const [respondiendo, setRespondiendo] = useState(null);
   const [tab, setTab] = useState('mercado');
+  // Filtros
+  const [filtroPosicion, setFiltroPosicion] = useState('');
+  const [filtroOvr, setFiltroOvr] = useState(0);
+  const [mostrarLibres, setMostrarLibres] = useState(false);
 
   const cargar = () => {
     getClubs().then(cs => setClubs(cs.filter(c => c.id !== clubId)));
     getTransferencias(clubId).then(setHistorial);
     getOfertas(clubId).then(setOfertas);
+    getMercado().then(setLibres);
   };
 
   useEffect(() => { cargar(); }, [clubId]);
@@ -108,32 +114,67 @@ export default function Transferencias({ clubId }) {
       {/* ─── Fichar ─── */}
       {tab === 'mercado' && (
         <div className="space-y-4">
-          <div className="card">
-            <label className="text-xs text-gray-400 uppercase tracking-wide mb-2 block">Explorar plantel de otro club</label>
-            <select
-              value={clubSeleccionado}
-              onChange={e => cargarJugadoresClub(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rugby-green"
-            >
-              <option value="">— Seleccioná un club —</option>
-              {clubs.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+          {/* Filtros */}
+          <div className="card space-y-3">
+            <div className="flex gap-3 flex-wrap items-end">
+              <div className="flex-1 min-w-36">
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Club</label>
+                <select
+                  value={mostrarLibres ? 'libres' : clubSeleccionado}
+                  onChange={e => {
+                    if (e.target.value === 'libres') { setMostrarLibres(true); setClubSeleccionado(''); }
+                    else { setMostrarLibres(false); cargarJugadoresClub(e.target.value); }
+                  }}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rugby-green"
+                >
+                  <option value="">— Seleccioná —</option>
+                  <option value="libres">🆓 Agentes libres ({libres.length})</option>
+                  {clubs.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </div>
+              <div className="min-w-36">
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">Posición</label>
+                <select
+                  value={filtroPosicion}
+                  onChange={e => setFiltroPosicion(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rugby-green"
+                >
+                  <option value="">Todas</option>
+                  {['Pilar Izq','Hooker','Pilar Der','Segunda Línea','Ala','Octavo','Medio Scrum','Apertura','Centro','Wing','Fullback'].map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="min-w-28">
+                <label className="text-xs text-gray-400 uppercase tracking-wide mb-1 block">OVR mín: {filtroOvr}</label>
+                <input type="range" min="0" max="90" step="5" value={filtroOvr}
+                  onChange={e => setFiltroOvr(parseInt(e.target.value))}
+                  className="w-full accent-rugby-green" />
+              </div>
+            </div>
           </div>
 
           {loading && <p className="text-gray-500 animate-pulse text-center">Cargando jugadores...</p>}
 
-          {jugadoresOtroClub.length > 0 && (
-            <div className="card space-y-1">
-              <div className="grid grid-cols-12 text-xs text-gray-600 uppercase px-2 pb-2 border-b border-gray-800">
-                <span className="col-span-4">Jugador</span>
-                <span className="col-span-2 text-center">OVR</span>
-                <span className="col-span-3 text-center">Posición</span>
-                <span className="col-span-2 text-center">Valor</span>
-                <span className="col-span-1" />
-              </div>
-              {jugadoresOtroClub
-                .sort((a, b) => overall(b) - overall(a))
-                .map(j => (
+          {(() => {
+            const lista = (mostrarLibres ? libres : jugadoresOtroClub)
+              .filter(j => (!filtroPosicion || j.posicion === filtroPosicion) && overall(j) >= filtroOvr)
+              .sort((a, b) => overall(b) - overall(a));
+
+            if (!mostrarLibres && !clubSeleccionado) return null;
+            return (
+              <div className="card space-y-1">
+                <div className="flex items-center justify-between px-2 pb-2 border-b border-gray-800">
+                  <div className="grid grid-cols-12 flex-1 text-xs text-gray-600 uppercase">
+                    <span className="col-span-4">Jugador</span>
+                    <span className="col-span-2 text-center">OVR</span>
+                    <span className="col-span-3 text-center">Posición</span>
+                    <span className="col-span-2 text-center">Valor</span>
+                    <span className="col-span-1" />
+                  </div>
+                </div>
+                {lista.length === 0 && <p className="text-gray-600 text-sm text-center py-4">Sin resultados con esos filtros</p>}
+                {lista.map(j => (
                   <div key={j.id} className="grid grid-cols-12 items-center py-2 px-2 hover:bg-gray-800 rounded-lg">
                     <div className="col-span-4">
                       <p className="text-sm font-medium text-white">{j.nombre} {j.apellido}</p>
@@ -143,18 +184,15 @@ export default function Transferencias({ clubId }) {
                     <span className="col-span-3 text-center text-xs text-gray-400">{j.posicion}</span>
                     <span className="col-span-2 text-center text-xs text-gray-300">${(j.valor/1000).toFixed(0)}k</span>
                     <div className="col-span-1 flex justify-center">
-                      <button
-                        onClick={() => handleComprar(j)}
-                        disabled={comprando === j.id}
-                        className="text-xs btn-primary py-1 px-2"
-                      >
+                      <button onClick={() => handleComprar(j)} disabled={comprando === j.id} className="text-xs btn-primary py-1 px-2">
                         {comprando === j.id ? '...' : '→'}
                       </button>
                     </div>
                   </div>
                 ))}
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

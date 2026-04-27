@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getJugadores, getJornadas, toggleVenta } from '../api/client.js';
+import { getJugadores, getJornadas, toggleVenta, getClubs } from '../api/client.js';
 
 const POSICION_NUM = {
   'Pilar Izq': 1, 'Hooker': 2, 'Pilar Der': 3,
@@ -90,8 +90,9 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
             ))}
           </div>
           <div className="mt-2 pt-2 border-t border-gray-800 flex items-center justify-between gap-4 text-xs text-gray-500">
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <span>Valor: <span className="text-white">${(j.valor / 1000).toFixed(0)}k</span></span>
+              <span>Salario: <span className="text-yellow-400">${Math.round(j.valor / 200).toLocaleString('es-AR')}/j</span></span>
               <span>Moral: <span className={attrColor(j.moral)}>{j.moral}</span></span>
               {lesionado && <span>Lesionado: <span className="text-red-400">{jornadasResta} jornada(s)</span></span>}
             </div>
@@ -112,11 +113,63 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
   );
 }
 
+function ComparadorModal({ j1, j2, onClose }) {
+  const attrs = ATTRS;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
+      <div className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-xl shadow-2xl p-5"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-white">Comparar jugadores</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl">×</button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+          <div>
+            <p className="font-bold text-white text-sm">{j1.nombre} {j1.apellido}</p>
+            <p className="text-xs text-gray-500">{j1.posicion} · {j1.edad}a · OVR {overall(j1)}</p>
+          </div>
+          <div className="flex items-center justify-center">
+            <span className="text-gray-600 font-bold">vs</span>
+          </div>
+          <div>
+            <p className="font-bold text-white text-sm">{j2.nombre} {j2.apellido}</p>
+            <p className="text-xs text-gray-500">{j2.posicion} · {j2.edad}a · OVR {overall(j2)}</p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {attrs.map(({ key, label }) => {
+            const v1 = j1[key], v2 = j2[key];
+            const max = Math.max(v1, v2, 1);
+            return (
+              <div key={key} className="grid grid-cols-3 items-center gap-2">
+                <div className="flex items-center gap-2 justify-end">
+                  <span className={`text-xs font-bold w-6 text-right ${attrColor(v1)}`}>{v1}</span>
+                  <div className="flex-1 stat-bar-bg" style={{ maxWidth: 80 }}>
+                    <div className={`stat-bar ${v1 >= v2 ? 'bg-rugby-green' : 'bg-gray-600'}`} style={{ width: `${(v1 / 99) * 100}%` }} />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 text-center">{label}</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 stat-bar-bg" style={{ maxWidth: 80 }}>
+                    <div className={`stat-bar ${v2 >= v1 ? 'bg-rugby-green' : 'bg-gray-600'}`} style={{ width: `${(v2 / 99) * 100}%` }} />
+                  </div>
+                  <span className={`text-xs font-bold w-6 ${attrColor(v2)}`}>{v2}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Plantel({ clubId }) {
   const [jugadores, setJugadores] = useState([]);
   const [jornadaActual, setJornadaActual] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [comparando, setComparando] = useState(null);
   const [filtro, setFiltro] = useState('Todos');
 
   useEffect(() => {
@@ -154,6 +207,14 @@ export default function Plantel({ clubId }) {
               🩹 {lesionadosCount} lesionado(s)
             </span>
           )}
+          {selected && (
+            <button
+              onClick={() => { setComparando(selected); setSelected(null); }}
+              className="text-xs bg-gray-800 text-gray-300 hover:text-white px-3 py-1 rounded-lg transition-colors"
+            >
+              ⚖ Comparar otro
+            </button>
+          )}
           <span className="text-sm text-gray-400">{jugadores.length} jugadores</span>
         </div>
       </div>
@@ -185,11 +246,31 @@ export default function Plantel({ clubId }) {
             j={j}
             jornadaActual={jornadaActual}
             selected={selected === j.id}
-            onSelect={setSelected}
+            onSelect={(id) => {
+              if (comparando && id && id !== comparando) { setSelected(id); }
+              else { setSelected(selected === id ? null : id); }
+            }}
             onToggleVenta={handleToggleVenta}
           />
         ))}
       </div>
+
+      {comparando && !selected && (
+        <div className="card border-gray-600 bg-gray-800/50">
+          <p className="text-sm text-gray-400 mb-2">
+            Seleccioná un jugador para comparar con <span className="text-white font-bold">{jugadores.find(j => j.id === comparando)?.apellido}</span>
+          </p>
+          <button onClick={() => setComparando(null)} className="text-xs text-gray-500 hover:text-white transition-colors">Cancelar</button>
+        </div>
+      )}
+
+      {comparando && selected && comparando !== selected && (() => {
+        const j1 = jugadores.find(j => j.id === comparando);
+        const j2 = jugadores.find(j => j.id === selected);
+        return j1 && j2 ? (
+          <ComparadorModal j1={j1} j2={j2} onClose={() => { setComparando(null); setSelected(null); }} />
+        ) : null;
+      })()}
     </div>
   );
 }

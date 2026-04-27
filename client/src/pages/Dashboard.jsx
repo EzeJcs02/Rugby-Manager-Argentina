@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getClub, getTabla, getJornadas, getNoticias, leerTodasNoticias, getOfertas } from '../api/client.js';
+import { getClub, getTabla, getJornadas, getNoticias, leerTodasNoticias, getOfertas, getJugadores } from '../api/client.js';
 
 const TIPO_ICONO = {
   lesion:  '🩹',
@@ -26,14 +26,16 @@ export default function Dashboard({ clubId }) {
   const [jornadas, setJornadas] = useState([]);
   const [noticias, setNoticias] = useState([]);
   const [ofertas, setOfertas] = useState([]);
+  const [salarioSemanal, setSalarioSemanal] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([getClub(clubId), getTabla(), getJornadas(), getNoticias(clubId), getOfertas(clubId)])
-      .then(([c, t, j, n, o]) => {
+    Promise.all([getClub(clubId), getTabla(), getJornadas(), getNoticias(clubId), getOfertas(clubId), getJugadores(clubId)])
+      .then(([c, t, j, n, o, jugadores]) => {
         setClub(c); setTablaData(t); setJornadas(j);
         setNoticias(n); setOfertas(o);
+        setSalarioSemanal(jugadores.reduce((s, j) => s + Math.round(j.valor / 200), 0));
       })
       .finally(() => setLoading(false));
   }, [clubId]);
@@ -96,7 +98,7 @@ export default function Dashboard({ clubId }) {
           <StatItem label="Puntos" value={miStats.puntos} />
           <StatItem label="Partidos" value={`${miStats.pg}G ${miStats.pe}E ${miStats.pp}P`} sub={`${miStats.pj} jugados`} />
           <StatItem label="Diferencia" value={miStats.dif > 0 ? `+${miStats.dif}` : miStats.dif} sub={`${miStats.pf} a favor`} />
-          <StatItem label="Presupuesto" value={formatPesos(club.presupuesto)} sub={`Reputación ${club.reputacion}`} />
+          <StatItem label="Presupuesto" value={formatPesos(club.presupuesto)} sub={`Salarios: ${formatPesos(salarioSemanal)}/j`} />
         </div>
       )}
 

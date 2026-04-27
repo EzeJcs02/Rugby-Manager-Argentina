@@ -5,6 +5,17 @@ import { simularPartido, simularPartidoConFormacion, generarLesiones } from '../
 const router = Router();
 const prisma = new PrismaClient();
 
+async function descontarSalarios(clubIds) {
+  for (const clubId of clubIds) {
+    const jugadores = await prisma.jugador.findMany({ where: { clubId }, select: { valor: true } });
+    const total = jugadores.reduce((s, j) => s + Math.round(j.valor / 200), 0);
+    if (total > 0) {
+      const club = await prisma.club.findUnique({ where: { id: clubId }, select: { presupuesto: true } });
+      await prisma.club.update({ where: { id: clubId }, data: { presupuesto: Math.max(0, club.presupuesto - total) } });
+    }
+  }
+}
+
 async function aplicarLesiones(lesionados, jornada) {
   for (const l of lesionados) {
     await prisma.jugador.update({
@@ -139,7 +150,23 @@ router.post('/:id/simular', async (req, res) => {
       },
     });
 
-    res.json({ ...partidoActualizado, eventos: resultado.eventos, lesionados });
+    // Si es la final, declarar campeón
+    let campeon = null;
+    if (partido.tipo === 'final') {
+      const campeonId = resultado.puntosLocal >= resultado.puntosVisitante ? partido.clubLocalId : partido.clubVisitanteId;
+      const campeonClub = resultado.puntosLocal >= resultado.puntosVisitante ? partidoActualizado.clubLocal : partidoActualizado.clubVisitante;
+      await prisma.temporada.update({
+        where: { id: partido.temporadaId },
+        data: { campeonId, campeonNombre: campeonClub.nombre },
+      });
+      // Bonus presupuesto al campeón
+      await prisma.club.update({ where: { id: campeonId }, data: { presupuesto: { increment: 500000 } } });
+      // Noticia
+      await prisma.noticia.create({ data: { clubId: campeonId, tipo: 'sponsor', texto: `¡CAMPEONES DE LA COPA URBA! Premio de $500.000 acreditado al club.` } });
+      campeon = campeonClub;
+    }
+
+    res.json({ ...partidoActualizado, eventos: resultado.eventos, lesionados, campeon });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -204,7 +231,10 @@ router.post('/jornada/:num/simular', async (req, res) => {
       resultados.push({ ...actualizado, eventos: resultado.eventos, lesionados });
     }
 
-    await generarNoticiasAleatorias([...clubsAfectados], jornada);
+    await Promise.all([
+      generarNoticiasAleatorias([...clubsAfectados], jornada),
+      descontarSalarios([...clubsAfectados]),
+    ]);
 
     res.json(resultados);
   } catch (e) {
