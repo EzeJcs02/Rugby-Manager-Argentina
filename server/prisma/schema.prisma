@@ -53,6 +53,7 @@ model Jugador {
   moral Int   @default(75)
 
   lesionadoHasta Int?
+  convocadoHasta Int?
   enVenta        Boolean @default(false)
 
   clubId Int?

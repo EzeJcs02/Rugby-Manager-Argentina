@@ -76,7 +76,7 @@ function PickerModal({ numero, jugadores, onSelect, onClose }) {
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <p className="text-white text-sm font-medium">{j.nombre} {j.apellido}</p>
-          {j._lesionado && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">Lesionado</span>}
+          {j._lesionado && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">No disponible</span>}
         </div>
         <p className="text-gray-400 text-xs">{j.posicion} · {j.edad} años · moral {j.moral}</p>
       </div>
@@ -132,7 +132,11 @@ export default function Formacion({ clubId }) {
       const activa = jornadas.find(j => j.jugados < j.total) ?? jornadas[jornadas.length - 1];
       const jNum = activa?.numero ?? 1;
       setJornadaActual(jNum);
-      setJugadores(js.map(j => ({ ...j, _lesionado: j.lesionadoHasta != null && j.lesionadoHasta >= jNum })));
+      setJugadores(js.map(j => ({
+        ...j,
+        _lesionado: (j.lesionadoHasta != null && j.lesionadoHasta >= jNum) ||
+                    (j.convocadoHasta != null && j.convocadoHasta >= jNum),
+      })));
       if (form?.datos && typeof form.datos === 'object' && !Array.isArray(form.datos)) {
         const parsed = {};
         for (const [k, v] of Object.entries(form.datos)) {

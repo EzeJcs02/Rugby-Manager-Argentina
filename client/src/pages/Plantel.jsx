@@ -46,8 +46,10 @@ function overall(j) {
 
 function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
   const ov = overall(j);
-  const lesionado = j.lesionadoHasta != null && j.lesionadoHasta >= jornadaActual;
+  const lesionado   = j.lesionadoHasta  != null && j.lesionadoHasta  >= jornadaActual;
+  const convocado   = j.convocadoHasta  != null && j.convocadoHasta  >= jornadaActual;
   const jornadasResta = lesionado ? j.lesionadoHasta - jornadaActual + 1 : 0;
+  const jornadasConv  = convocado ? j.convocadoHasta  - jornadaActual + 1 : 0;
 
   return (
     <div>
@@ -62,6 +64,11 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
             {lesionado && (
               <span className="text-[10px] bg-red-900/60 text-red-300 px-1.5 py-0.5 rounded font-bold flex-shrink-0">
                 🩹 {jornadasResta}J
+              </span>
+            )}
+            {convocado && (
+              <span className="text-[10px] bg-blue-900/60 text-blue-300 px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                🌐 {jornadasConv}J
               </span>
             )}
             {j.enVenta && (
@@ -94,7 +101,8 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
               <span>Valor: <span className="text-white">${(j.valor / 1000).toFixed(0)}k</span></span>
               <span>Salario: <span className="text-yellow-400">${Math.round(j.valor / 200).toLocaleString('es-AR')}/j</span></span>
               <span>Moral: <span className={attrColor(j.moral)}>{j.moral}</span></span>
-              {lesionado && <span>Lesionado: <span className="text-red-400">{jornadasResta} jornada(s)</span></span>}
+              {lesionado  && <span>Lesionado: <span className="text-red-400">{jornadasResta} jornada(s)</span></span>}
+              {convocado  && <span>Selección: <span className="text-blue-400">{jornadasConv} jornada(s)</span></span>}
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); onToggleVenta(j.id); }}
@@ -196,6 +204,7 @@ export default function Plantel({ clubId }) {
   });
 
   const lesionadosCount = jugadores.filter(j => j.lesionadoHasta != null && j.lesionadoHasta >= jornadaActual).length;
+  const convocadosCount = jugadores.filter(j => j.convocadoHasta  != null && j.convocadoHasta  >= jornadaActual).length;
 
   return (
     <div className="space-y-4">
@@ -205,6 +214,11 @@ export default function Plantel({ clubId }) {
           {lesionadosCount > 0 && (
             <span className="text-xs text-red-400 bg-red-900/30 px-2 py-1 rounded">
               🩹 {lesionadosCount} lesionado(s)
+            </span>
+          )}
+          {convocadosCount > 0 && (
+            <span className="text-xs text-blue-400 bg-blue-900/30 px-2 py-1 rounded">
+              🌐 {convocadosCount} en selección
             </span>
           )}
           {selected && (

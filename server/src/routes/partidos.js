@@ -5,6 +5,50 @@ import { simularPartido, simularPartidoConFormacion, generarLesiones } from '../
 const router = Router();
 const prisma = new PrismaClient();
 
+const ATTRS = ['scrum','lineout','tackle','velocidad','pase','pie','vision','potencia','motor','liderazgo'];
+const calcOvr = j => Math.round(ATTRS.reduce((s, a) => s + j[a], 0) / ATTRS.length);
+
+// ─── A: INGRESOS POR PARTIDO ──────────────────────────────────────────────────
+async function aplicarIngresosPartido(partido, puntosLocal, puntosVisitante) {
+  const localGana = puntosLocal > puntosVisitante;
+  const empate    = puntosLocal === puntosVisitante;
+
+  const ingresoLocal    = localGana ? 120000 : empate ? 75000 : 45000;
+  const ingresoVisitante = !localGana && !empate ? 80000 : empate ? 55000 : 30000;
+
+  await Promise.all([
+    prisma.club.update({ where: { id: partido.clubLocalId },    data: { presupuesto: { increment: ingresoLocal    } } }),
+    prisma.club.update({ where: { id: partido.clubVisitanteId }, data: { presupuesto: { increment: ingresoVisitante } } }),
+  ]);
+
+  return { ingresoLocal, ingresoVisitante };
+}
+
+// ─── A: PROGRESIÓN DE JUGADORES ───────────────────────────────────────────────
+async function aplicarProgresion(clubIds) {
+  const jugadores = await prisma.jugador.findMany({ where: { clubId: { in: clubIds } } });
+  for (const j of jugadores) {
+    let chance = 0, delta = 0;
+    if      (j.edad <= 22) { chance = 0.30; delta =  1; }
+    else if (j.edad <= 24) { chance = 0.20; delta =  1; }
+    else if (j.edad <= 26) { chance = 0.10; delta =  1; }
+    else if (j.edad >= 34) { chance = 0.35; delta = -1; }
+    else if (j.edad >= 31) { chance = 0.20; delta = -1; }
+
+    if (chance === 0 || Math.random() > chance) continue;
+
+    // Jóvenes mejoran atributos relacionados a su perfil; veteranos pierden físico
+    const pool = (delta > 0)
+      ? ATTRS
+      : ['velocidad', 'motor', 'potencia'];
+    const attr = pool[Math.floor(Math.random() * pool.length)];
+    const newVal = Math.max(40, Math.min(99, j[attr] + delta));
+    if (newVal === j[attr]) continue;
+    await prisma.jugador.update({ where: { id: j.id }, data: { [attr]: newVal } });
+  }
+}
+
+// ─── B: DESCUENTO DE SALARIOS ─────────────────────────────────────────────────
 async function descontarSalarios(clubIds) {
   for (const clubId of clubIds) {
     const jugadores = await prisma.jugador.findMany({ where: { clubId }, select: { valor: true } });
@@ -16,6 +60,7 @@ async function descontarSalarios(clubIds) {
   }
 }
 
+// ─── LESIONES ─────────────────────────────────────────────────────────────────
 async function aplicarLesiones(lesionados, jornada) {
   for (const l of lesionados) {
     await prisma.jugador.update({
@@ -25,6 +70,35 @@ async function aplicarLesiones(lesionados, jornada) {
   }
 }
 
+// ─── C: CONVOCATORIAS INTERNACIONALES ─────────────────────────────────────────
+async function generarConvocatorias(clubIds, jornada) {
+  for (const clubId of clubIds) {
+    if (Math.random() > 0.18) continue;
+
+    const candidatos = await prisma.jugador.findMany({
+      where: { clubId, lesionadoHasta: null, convocadoHasta: null },
+    });
+    const elegibles = candidatos.filter(j => calcOvr(j) >= 73);
+    if (elegibles.length === 0) continue;
+
+    const jugador = elegibles[Math.floor(Math.random() * elegibles.length)];
+    const jornadasFuera = Math.random() < 0.35 ? 2 : 1;
+
+    await prisma.jugador.update({
+      where: { id: jugador.id },
+      data: { convocadoHasta: jornada + jornadasFuera },
+    });
+    await prisma.noticia.create({
+      data: {
+        clubId,
+        tipo: 'moral',
+        texto: `${jugador.nombre} ${jugador.apellido} fue convocado a su selección nacional y no estará disponible por ${jornadasFuera} jornada(s).`,
+      },
+    });
+  }
+}
+
+// ─── NOTICIAS ALEATORIAS ──────────────────────────────────────────────────────
 const MENSAJES_SPONSOR = [
   'Un nuevo sponsor firmó un acuerdo con el club',
   'El municipio aportó fondos para la infraestructura',
@@ -43,7 +117,6 @@ const MENSAJES_MORAL_BAJA = [
 ];
 
 async function generarOfertaRival(clubId, todosLosClubs) {
-  // Un club rival hace oferta por uno de los mejores jugadores de este club
   const jugadores = await prisma.jugador.findMany({ where: { clubId, enVenta: false }, take: 20 });
   if (jugadores.length === 0) return;
   const jugador = jugadores[Math.floor(Math.random() * Math.min(jugadores.length, 8))];
@@ -68,33 +141,28 @@ async function generarNoticiasAleatorias(clubIds, jornada) {
   const todosLosClubs = await prisma.club.findMany();
   for (const clubId of clubIds) {
     const r = Math.random();
-
     if (r < 0.15) {
-      // Evento sponsor
       const monto = (Math.floor(Math.random() * 10) + 5) * 10000;
       const texto = MENSAJES_SPONSOR[Math.floor(Math.random() * MENSAJES_SPONSOR.length)];
       await prisma.club.update({ where: { id: clubId }, data: { presupuesto: { increment: monto } } });
       await prisma.noticia.create({ data: { clubId, tipo: 'sponsor', texto: `${texto}. +${monto.toLocaleString('es-AR')} pesos.` } });
     } else if (r < 0.25) {
-      // Moral alta
       const texto = MENSAJES_MORAL_ALTA[Math.floor(Math.random() * MENSAJES_MORAL_ALTA.length)];
       await prisma.jugador.updateMany({ where: { clubId }, data: { moral: { increment: 5 } } });
       await prisma.jugador.updateMany({ where: { clubId, moral: { gt: 99 } }, data: { moral: 99 } });
       await prisma.noticia.create({ data: { clubId, tipo: 'moral', texto } });
     } else if (r < 0.32) {
-      // Moral baja
       const texto = MENSAJES_MORAL_BAJA[Math.floor(Math.random() * MENSAJES_MORAL_BAJA.length)];
       await prisma.jugador.updateMany({ where: { clubId }, data: { moral: { decrement: 5 } } });
       await prisma.jugador.updateMany({ where: { clubId, moral: { lt: 40 } }, data: { moral: 40 } });
       await prisma.noticia.create({ data: { clubId, tipo: 'moral', texto } });
     } else if (r < 0.40) {
-      // Oferta de un rival por un jugador
       await generarOfertaRival(clubId, todosLosClubs);
     }
   }
 }
 
-// POST /api/partidos/:id/simular
+// ─── POST /api/partidos/:id/simular ──────────────────────────────────────────
 router.post('/:id/simular', async (req, res) => {
   try {
     const partido = await prisma.partido.findUniqueOrThrow({
@@ -128,6 +196,7 @@ router.post('/:id/simular', async (req, res) => {
         },
       }),
       aplicarLesiones(lesionados, partido.jornada),
+      aplicarIngresosPartido(partido, resultado.puntosLocal, resultado.puntosVisitante),
     ]);
 
     // Noticias de lesiones
@@ -159,9 +228,7 @@ router.post('/:id/simular', async (req, res) => {
         where: { id: partido.temporadaId },
         data: { campeonId, campeonNombre: campeonClub.nombre },
       });
-      // Bonus presupuesto al campeón
       await prisma.club.update({ where: { id: campeonId }, data: { presupuesto: { increment: 500000 } } });
-      // Noticia
       await prisma.noticia.create({ data: { clubId: campeonId, tipo: 'sponsor', texto: `¡CAMPEONES DEL SUPER RUGBY AMERICAS! Premio de $500.000 acreditado al club.` } });
       campeon = campeonClub;
     }
@@ -172,7 +239,7 @@ router.post('/:id/simular', async (req, res) => {
   }
 });
 
-// POST /api/partidos/jornada/:num/simular
+// ─── POST /api/partidos/jornada/:num/simular ──────────────────────────────────
 router.post('/jornada/:num/simular', async (req, res) => {
   try {
     const temporada = await prisma.temporada.findFirst({ where: { activa: true } });
@@ -217,7 +284,10 @@ router.post('/jornada/:num/simular', async (req, res) => {
         },
       });
 
-      await aplicarLesiones(lesionados, jornada);
+      await Promise.all([
+        aplicarLesiones(lesionados, jornada),
+        aplicarIngresosPartido(partido, resultado.puntosLocal, resultado.puntosVisitante),
+      ]);
 
       for (const l of lesionados) {
         const clubId = l.equipo === 'local' ? partido.clubLocalId : partido.clubVisitanteId;
@@ -234,6 +304,8 @@ router.post('/jornada/:num/simular', async (req, res) => {
     await Promise.all([
       generarNoticiasAleatorias([...clubsAfectados], jornada),
       descontarSalarios([...clubsAfectados]),
+      aplicarProgresion([...clubsAfectados]),
+      generarConvocatorias([...clubsAfectados], jornada),
     ]);
 
     res.json(resultados);

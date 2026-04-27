@@ -172,7 +172,7 @@ router.post('/copa/iniciar', async (_req, res) => {
       prisma.partido.create({ data: { temporadaId: temporada.id, clubLocalId: p2.clubId, clubVisitanteId: p3.clubId, jornada: 100, tipo: 'semifinal' } }),
     ]);
 
-    res.json({ mensaje: 'Copa URBA iniciada', semifinales: [sf1, sf2], clasificados: [p1, p2, p3, p4] });
+    res.json({ mensaje: 'Playoffs iniciados', semifinales: [sf1, sf2], clasificados: [p1, p2, p3, p4] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -203,11 +203,48 @@ router.post('/copa/crear-final', async (_req, res) => {
       },
     });
 
-    res.json({ mensaje: '¡Final de la Copa URBA creada!', final });
+    res.json({ mensaje: '¡Final creada!', final });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ─── D: TRANSFERENCIAS IA EN PRETEMPORADA ─────────────────────────────────────
+async function realizarTransferenciasIA(clubs) {
+  const ATTRS = ['scrum','lineout','tackle','velocidad','pase','pie','vision','potencia','motor','liderazgo'];
+  const calcOvr = j => Math.round(ATTRS.reduce((s, a) => s + j[a], 0) / ATTRS.length);
+
+  // Cada club libera 2-3 de sus peores jugadores al mercado libre
+  for (const club of clubs) {
+    const jugadores = await prisma.jugador.findMany({
+      where: { clubId: club.id },
+      orderBy: { valor: 'asc' },
+    });
+    const cantLiberar = Math.floor(Math.random() * 2) + 2;
+    for (const j of jugadores.slice(0, cantLiberar)) {
+      await prisma.jugador.update({ where: { id: j.id }, data: { clubId: null, enVenta: false } });
+    }
+  }
+
+  // Cada club intenta fichar 1-2 agentes libres
+  const libres = await prisma.jugador.findMany({ where: { clubId: null } });
+  const pool = [...libres].sort(() => Math.random() - 0.5);
+
+  for (const club of clubs) {
+    const clubData = await prisma.club.findUnique({ where: { id: club.id } });
+    const cantFichar = Math.floor(Math.random() * 2) + 1;
+    let fichados = 0;
+    for (const j of pool) {
+      if (fichados >= cantFichar) break;
+      if (j.clubId !== null) continue;
+      if (clubData.presupuesto < j.valor * 0.4) continue;
+      await prisma.jugador.update({ where: { id: j.id }, data: { clubId: club.id } });
+      await prisma.club.update({ where: { id: club.id }, data: { presupuesto: { decrement: Math.round(j.valor * 0.3) } } });
+      j.clubId = club.id;
+      fichados++;
+    }
+  }
+}
 
 // POST /api/temporada/finalizar
 router.post('/finalizar', async (_req, res) => {
@@ -228,7 +265,7 @@ router.post('/finalizar', async (_req, res) => {
         await prisma.jugador.update({ where: { id: j.id }, data: { clubId: null } });
       } else {
         const decaimiento = j.edad >= 32 ? { motor: Math.max(j.motor - 1, 40), velocidad: Math.max(j.velocidad - 1, 40) } : {};
-        await prisma.jugador.update({ where: { id: j.id }, data: { edad: j.edad + 1, moral: 75, lesionadoHasta: null, ...decaimiento } });
+        await prisma.jugador.update({ where: { id: j.id }, data: { edad: j.edad + 1, moral: 75, lesionadoHasta: null, convocadoHasta: null, ...decaimiento } });
       }
     }
 
@@ -263,6 +300,9 @@ router.post('/finalizar', async (_req, res) => {
         });
       }
     }
+
+    // D: Transferencias IA en pretemporada
+    await realizarTransferenciasIA(clubs);
 
     // Nueva temporada con fixture
     const nuevaTemporada = await prisma.temporada.create({
