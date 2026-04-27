@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getClubs } from '../api/client.js';
+import { TEAM_LOGOS, SRA_LOGO } from '../constants/logos.js';
 
 const FLAGS = {
   'Argentina': '🇦🇷',
@@ -24,9 +25,33 @@ function getAbbr(nombre) {
 }
 
 function Shield({ club, size = 72 }) {
+  const [imgError, setImgError] = useState(false);
+  const logoUrl = TEAM_LOGOS[club.nombre];
+  const border = club.color2 === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : club.color2;
+
+  if (logoUrl && !imgError) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: '50%',
+        border: `3px solid ${border}`,
+        boxShadow: `0 8px 32px ${club.color1}60`,
+        overflow: 'hidden', flexShrink: 0,
+        background: '#12121F',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+      }}>
+        <img
+          src={logoUrl}
+          alt={club.nombre}
+          onError={() => setImgError(true)}
+          style={{ width: '85%', height: '85%', objectFit: 'contain' }}
+        />
+      </div>
+    );
+  }
+
   const abbr = getAbbr(club.nombre);
   const textColor = isLight(club.color1) ? '#111' : '#fff';
-  const border = club.color2 === '#FFFFFF' ? 'rgba(255,255,255,0.2)' : club.color2;
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
@@ -64,13 +89,12 @@ export default function SeleccionClub({ onSelect }) {
       }}
     >
       {/* Header */}
-      <div className="text-center mb-12 select-none">
-        <p
-          className="text-[11px] font-black uppercase tracking-[0.35em] mb-3"
-          style={{ color: '#E8172C' }}
-        >
-          ● Super Rugby Americas ●
-        </p>
+      <div className="text-center mb-12 select-none flex flex-col items-center">
+        <img
+          src={SRA_LOGO}
+          alt="Super Rugby Americas"
+          style={{ height: 80, width: 'auto', objectFit: 'contain', marginBottom: 20 }}
+        />
         <h1 className="text-5xl sm:text-6xl font-black text-white uppercase leading-none tracking-tight">
           Rugby
         </h1>

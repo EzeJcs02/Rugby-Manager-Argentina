@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { getClub } from '../api/client.js';
+import { TEAM_LOGOS, SRA_LOGO } from '../constants/logos.js';
 
 const NAV = [
   { to: '/',               label: 'Inicio',    icon: '⚡' },
@@ -26,13 +27,37 @@ function formatBudget(n) {
 }
 
 export function ClubShield({ club, size = 40 }) {
+  const [imgError, setImgError] = useState(false);
   if (!club) return <div style={{ width: size, height: size, borderRadius: '50%', background: '#1E1E32' }} />;
+
+  const logoUrl = TEAM_LOGOS[club.nombre];
+  const border = club.color2 === '#FFFFFF' ? 'rgba(255,255,255,0.25)' : club.color2;
+
+  if (logoUrl && !imgError) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: '50%',
+        border: `2px solid ${border}`,
+        boxShadow: `0 0 20px ${club.color1}40`,
+        overflow: 'hidden', flexShrink: 0,
+        background: '#12121F',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <img
+          src={logoUrl}
+          alt={club.nombre}
+          onError={() => setImgError(true)}
+          style={{ width: '85%', height: '85%', objectFit: 'contain' }}
+        />
+      </div>
+    );
+  }
+
   const words = club.nombre.replace(' XV','').replace(' Rugby','').split(' ');
   const abbr = words.length >= 2
     ? (words[0][0] + words[1][0]).toUpperCase()
     : club.nombre.slice(0,3).toUpperCase();
   const textColor = isLight(club.color1) ? '#111' : '#fff';
-  const border = club.color2 === '#FFFFFF' ? 'rgba(255,255,255,0.25)' : club.color2;
 
   return (
     <div style={{
@@ -66,9 +91,12 @@ export default function Layout({ clubId, onLogout, children }) {
 
           {/* Brand */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xl select-none">🏉</span>
+            <img
+              src={SRA_LOGO}
+              alt="Super Rugby Americas"
+              style={{ height: 32, width: 'auto', objectFit: 'contain' }}
+            />
             <div className="leading-none hidden sm:block">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white">Super Rugby</p>
               <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: '#E8172C' }}>Manager</p>
             </div>
           </div>
