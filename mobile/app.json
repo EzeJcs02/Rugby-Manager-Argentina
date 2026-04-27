@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Rugby Manager Argentina",
+    "slug": "rugby-manager-argentina",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "rugby-manager",
+    "splash": {
+      "backgroundColor": "#0A0A0A",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ezejcs02.rugbymanager"
+    },
+    "android": {
+      "adaptiveIcon": { "backgroundColor": "#0A0A0A" },
+      "package": "com.ezejcs02.rugbymanager"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        { "backgroundColor": "#0A0A0A", "image": "./assets/icon.png", "imageWidth": 200 }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
