@@ -7,6 +7,8 @@ import partidosRouter from './routes/partidos.js';
 import transferenciasRouter from './routes/transferencias.js';
 import formacionRouter from './routes/formacion.js';
 import entrenamientoRouter from './routes/entrenamiento.js';
+import noticiasRouter from './routes/noticias.js';
+import estadisticasRouter from './routes/estadisticas.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -22,6 +24,8 @@ app.use('/api/partidos', partidosRouter);
 app.use('/api/transferencias', transferenciasRouter);
 app.use('/api/formacion', formacionRouter);
 app.use('/api/entrenamiento', entrenamientoRouter);
+app.use('/api/noticias', noticiasRouter);
+app.use('/api/estadisticas', estadisticasRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

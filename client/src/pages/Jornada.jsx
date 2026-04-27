@@ -85,7 +85,7 @@ function MatchAnimation({ resultado, partido, onClose }) {
               ${ev.equipo === 'local' ? 'bg-blue-950/50 flex-row' : 'bg-orange-950/50 flex-row-reverse'}`}>
               <span className="text-lg">{TIPO_ICON[ev.tipo]}</span>
               <div className={`flex-1 ${ev.equipo === 'visitante' ? 'text-right' : ''}`}>
-                <p className="text-white font-bold text-sm">{TIPO_LABEL[ev.tipo]}</p>
+                <p className="text-white font-bold text-sm">{TIPO_LABEL[ev.tipo]}{ev.jugadorNombre ? ` — ${ev.jugadorNombre}` : ''}</p>
                 <p className="text-gray-400 text-xs">Min {ev.minuto}' · +{ev.puntos} pts</p>
               </div>
               <div className="w-2 h-2 rounded-full flex-shrink-0"
@@ -369,14 +369,21 @@ export default function Jornada({ clubId }) {
           <h3 className="font-bold text-white mb-3">Resultados de la jornada</h3>
           <div className="space-y-2">
             {resultados.map(r => (
-              <div key={r.id} className="flex items-center justify-between text-sm">
-                <span className={r.puntosLocal >= r.puntosVisitante ? 'text-rugby-green font-bold' : 'text-gray-400'}>
-                  {r.clubLocal.nombre}
-                </span>
-                <span className="text-white font-bold mx-3">{r.puntosLocal} – {r.puntosVisitante}</span>
-                <span className={r.puntosVisitante >= r.puntosLocal ? 'text-rugby-green font-bold' : 'text-gray-400'}>
-                  {r.clubVisitante.nombre}
-                </span>
+              <div key={r.id}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className={r.puntosLocal >= r.puntosVisitante ? 'text-rugby-green font-bold' : 'text-gray-400'}>
+                    {r.clubLocal.nombre}
+                  </span>
+                  <span className="text-white font-bold mx-3">{r.puntosLocal} – {r.puntosVisitante}</span>
+                  <span className={r.puntosVisitante >= r.puntosLocal ? 'text-rugby-green font-bold' : 'text-gray-400'}>
+                    {r.clubVisitante.nombre}
+                  </span>
+                </div>
+                {r.lesionados?.length > 0 && (
+                  <p className="text-xs text-red-400 mt-0.5 pl-1">
+                    🩹 {r.lesionados.map(l => l.jugadorNombre).join(', ')} se lesionaron
+                  </p>
+                )}
               </div>
             ))}
           </div>

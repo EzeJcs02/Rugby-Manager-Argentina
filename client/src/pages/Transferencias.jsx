@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getClubs, getJugadores, getTransferencias, crearTransferencia } from '../api/client.js';
+import { getClubs, getJugadores, getTransferencias, crearTransferencia, getOfertas, responderOferta } from '../api/client.js';
 
 const ATTRS = ['scrum','lineout','tackle','velocidad','pase','pie','vision','potencia','motor','liderazgo'];
 function overall(j) { return Math.round(ATTRS.reduce((s, a) => s + j[a], 0) / ATTRS.length); }
@@ -11,21 +11,32 @@ function attrColor(v) {
   return 'text-red-400';
 }
 
+const formatPesos = (n) =>
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
+
 export default function Transferencias({ clubId }) {
   const [clubs, setClubs] = useState([]);
   const [clubSeleccionado, setClubSeleccionado] = useState('');
   const [jugadoresOtroClub, setJugadoresOtroClub] = useState([]);
-  const [misJugadores, setMisJugadores] = useState([]);
   const [historial, setHistorial] = useState([]);
+  const [ofertas, setOfertas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [comprando, setComprando] = useState(null);
+  const [respondiendo, setRespondiendo] = useState(null);
   const [tab, setTab] = useState('mercado');
 
-  useEffect(() => {
+  const cargar = () => {
     getClubs().then(cs => setClubs(cs.filter(c => c.id !== clubId)));
-    getJugadores(clubId).then(setMisJugadores);
     getTransferencias(clubId).then(setHistorial);
-  }, [clubId]);
+    getOfertas(clubId).then(setOfertas);
+  };
+
+  useEffect(() => { cargar(); }, [clubId]);
+
+  // Ir a ofertas si hay alguna pendiente
+  useEffect(() => {
+    if (ofertas.length > 0 && tab === 'mercado') setTab('ofertas');
+  }, [ofertas.length]);
 
   const cargarJugadoresClub = async (id) => {
     setClubSeleccionado(id);
@@ -38,14 +49,12 @@ export default function Transferencias({ clubId }) {
 
   const handleComprar = async (jugador) => {
     const monto = jugador.valor;
-    if (!confirm(`¿Comprár a ${jugador.nombre} ${jugador.apellido} por $${(monto/1000).toFixed(0)}k?`)) return;
+    if (!confirm(`¿Comprar a ${jugador.nombre} ${jugador.apellido} por ${formatPesos(monto)}?`)) return;
     setComprando(jugador.id);
     try {
       await crearTransferencia({ jugadorId: jugador.id, clubDestinoId: clubId, monto });
       setJugadoresOtroClub(prev => prev.filter(j => j.id !== jugador.id));
-      const [mis, hist] = await Promise.all([getJugadores(clubId), getTransferencias(clubId)]);
-      setMisJugadores(mis);
-      setHistorial(hist);
+      cargar();
       alert(`✅ ${jugador.nombre} ${jugador.apellido} fichado!`);
     } catch (e) {
       alert(e.response?.data?.error ?? 'Error en la transferencia');
@@ -54,23 +63,49 @@ export default function Transferencias({ clubId }) {
     }
   };
 
+  const handleResponder = async (id, accion) => {
+    setRespondiendo(id);
+    try {
+      await responderOferta(id, accion);
+      setOfertas(prev => prev.filter(o => o.id !== id));
+      cargar();
+    } catch (e) {
+      alert(e.response?.data?.error ?? 'Error al responder oferta');
+    } finally {
+      setRespondiendo(null);
+    }
+  };
+
+  const tabs = [
+    { id: 'mercado',  label: '🔍 Fichar', count: null },
+    { id: 'ofertas',  label: '📨 Ofertas', count: ofertas.length || null },
+    { id: 'historial', label: '📋 Historial', count: null },
+  ];
+
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold text-white">Transferencias</h1>
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {[{ id: 'mercado', label: '🔍 Fichar jugadores' }, { id: 'historial', label: '📋 Historial' }].map(t => (
+        {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.id ? 'bg-rugby-green text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5
+              ${tab === t.id ? 'bg-rugby-green text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
           >
             {t.label}
+            {t.count != null && (
+              <span className="bg-yellow-500 text-gray-900 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                {t.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
+      {/* ─── Fichar ─── */}
       {tab === 'mercado' && (
         <div className="space-y-4">
           <div className="card">
@@ -123,6 +158,54 @@ export default function Transferencias({ clubId }) {
         </div>
       )}
 
+      {/* ─── Ofertas recibidas ─── */}
+      {tab === 'ofertas' && (
+        <div className="space-y-3">
+          {ofertas.length === 0 ? (
+            <div className="card text-center py-8">
+              <p className="text-gray-500 text-sm">No hay ofertas pendientes.</p>
+              <p className="text-gray-600 text-xs mt-1">Las ofertas aparecen cuando simulás jornadas.</p>
+            </div>
+          ) : (
+            ofertas.map(o => (
+              <div key={o.id} className="card border-yellow-500/30">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: o.clubDestino.color1 }} />
+                      <p className="text-sm text-gray-400">{o.clubDestino.nombre} ofrece por:</p>
+                    </div>
+                    <p className="text-white font-bold">{o.jugador.nombre} {o.jugador.apellido}</p>
+                    <p className="text-xs text-gray-500">{o.jugador.posicion} · {o.jugador.edad} años · OVR {overall(o.jugador)}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-rugby-green font-bold text-lg">{formatPesos(o.monto)}</p>
+                    <p className="text-xs text-gray-600">Valor base: {formatPesos(o.jugador.valor)}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3 pt-3 border-t border-gray-800">
+                  <button
+                    onClick={() => handleResponder(o.id, 'rechazar')}
+                    disabled={respondiendo === o.id}
+                    className="flex-1 px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 text-sm transition-colors"
+                  >
+                    Rechazar
+                  </button>
+                  <button
+                    onClick={() => handleResponder(o.id, 'aceptar')}
+                    disabled={respondiendo === o.id}
+                    className="flex-1 btn-primary"
+                  >
+                    {respondiendo === o.id ? '...' : `Aceptar ${formatPesos(o.monto)}`}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ─── Historial ─── */}
       {tab === 'historial' && (
         <div className="card">
           {historial.length === 0 ? (
@@ -138,8 +221,8 @@ export default function Transferencias({ clubId }) {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-rugby-green font-bold">${(t.monto/1000).toFixed(0)}k</p>
-                    <span className={`badge text-xs ${t.estado === 'aprobada' ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'}`}>
+                    <p className="text-sm text-rugby-green font-bold">{formatPesos(t.monto)}</p>
+                    <span className={`badge text-xs ${t.estado === 'aprobada' ? 'bg-green-900 text-green-300' : 'bg-gray-800 text-gray-500'}`}>
                       {t.estado}
                     </span>
                   </div>

@@ -9,6 +9,7 @@ import Tabla from './pages/Tabla.jsx';
 import Transferencias from './pages/Transferencias.jsx';
 import Formacion from './pages/Formacion.jsx';
 import Entrenamiento from './pages/Entrenamiento.jsx';
+import Estadisticas from './pages/Estadisticas.jsx';
 
 export default function App() {
   const [clubId, setClubId] = useState(() => {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/transferencias" element={<Transferencias clubId={clubId} />} />
         <Route path="/formacion" element={<Formacion clubId={clubId} />} />
         <Route path="/entrenamiento" element={<Entrenamiento clubId={clubId} />} />
+        <Route path="/estadisticas" element={<Estadisticas clubId={clubId} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

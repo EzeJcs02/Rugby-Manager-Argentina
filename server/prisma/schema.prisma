@@ -25,6 +25,7 @@ model Club {
   transferenciasOrigen  Transferencia[] @relation("ClubOrigen")
   transferenciasDestino Transferencia[] @relation("ClubDestino")
   formacion             Formacion?
+  noticias              Noticia[]
 
   @@map("clubs")
 }
@@ -50,6 +51,9 @@ model Jugador {
 
   valor Float @default(50000)
   moral Int   @default(75)
+
+  lesionadoHasta Int?
+  enVenta        Boolean @default(false)
 
   clubId Int?
   club   Club? @relation(fields: [clubId], references: [id])
@@ -97,6 +101,18 @@ model Partido {
   eventos         Json?
 
   @@map("partidos")
+}
+
+model Noticia {
+  id     Int      @id @default(autoincrement())
+  clubId Int
+  club   Club     @relation(fields: [clubId], references: [id])
+  tipo   String
+  texto  String
+  leida  Boolean  @default(false)
+  fecha  DateTime @default(now())
+
+  @@map("noticias")
 }
 
 model Transferencia {

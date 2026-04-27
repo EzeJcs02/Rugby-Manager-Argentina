@@ -10,6 +10,7 @@ const navItems = [
   { to: '/jornada', label: 'Jornada', icon: '🏉' },
   { to: '/tabla', label: 'Tabla', icon: '📊' },
   { to: '/transferencias', label: 'Transferencias', icon: '🔄' },
+  { to: '/estadisticas', label: 'Estadísticas', icon: '📈' },
 ];
 
 export default function Layout({ clubId, onLogout, children }) {

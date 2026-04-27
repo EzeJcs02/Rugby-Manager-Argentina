@@ -75,6 +75,41 @@ function calcularFuerzaEquipo(jugadores) {
   };
 }
 
+function seleccionarAnotador(titulares, tipo) {
+  if (!titulares || titulares.length === 0) return null;
+  const prioridades = {
+    try:   ['Wing', 'Centro', 'Fullback', 'Apertura', 'Ala', 'Octavo', 'Medio Scrum', 'Pilar Izq', 'Hooker', 'Pilar Der', 'Segunda Línea'],
+    penal: ['Apertura', 'Fullback', 'Medio Scrum', 'Centro'],
+    drop:  ['Apertura', 'Centro', 'Medio Scrum'],
+  };
+  const orden = prioridades[tipo] ?? [];
+  for (const pos of orden) {
+    const cands = titulares.filter(j => j.posicion === pos);
+    if (cands.length > 0 && Math.random() < 0.75) {
+      return cands[Math.floor(Math.random() * cands.length)];
+    }
+  }
+  return titulares[Math.floor(Math.random() * titulares.length)];
+}
+
+export function generarLesiones(titularesLocal, titularesVisitante) {
+  const lesionados = [];
+  for (const [equipo, titulares] of [['local', titularesLocal], ['visitante', titularesVisitante]]) {
+    const r = Math.random();
+    const num = r < 0.05 ? 2 : r < 0.22 ? 1 : 0;
+    const candidatos = [...titulares].sort(() => 0.5 - Math.random()).slice(0, num);
+    for (const j of candidatos) {
+      lesionados.push({
+        equipo,
+        jugadorId: j.id,
+        jugadorNombre: `${j.nombre} ${j.apellido}`,
+        jornadasFuera: Math.floor(Math.random() * 3) + 1,
+      });
+    }
+  }
+  return lesionados;
+}
+
 function simularPeriodo(ataqueA, defensaB) {
   const prob = (ataqueA / (ataqueA + defensaB)) * 0.28;
   if (Math.random() > prob) return null;
@@ -184,17 +219,19 @@ export function simularPartidoConFormacion(jugadoresLocal, jugadoresVisitante, f
     if (evLocal) {
       puntosLocal += evLocal.puntos;
       triesLocal += evLocal.tries;
-      eventos.push({ minuto, equipo: 'local', ...evLocal });
+      const anotador = seleccionarAnotador(local.titulares, evLocal.tipo);
+      eventos.push({ minuto, equipo: 'local', ...evLocal, jugadorId: anotador?.id ?? null, jugadorNombre: anotador ? `${anotador.nombre} ${anotador.apellido}` : null });
     }
     const evVisitante = simularPeriodo(visitante.ataque, defensaLocal);
     if (evVisitante) {
       puntosVisitante += evVisitante.puntos;
       triesVisitante += evVisitante.tries;
-      eventos.push({ minuto, equipo: 'visitante', ...evVisitante });
+      const anotador = seleccionarAnotador(visitante.titulares, evVisitante.tipo);
+      eventos.push({ minuto, equipo: 'visitante', ...evVisitante, jugadorId: anotador?.id ?? null, jugadorNombre: anotador ? `${anotador.nombre} ${anotador.apellido}` : null });
     }
   }
 
-  return { puntosLocal, puntosVisitante, triesLocal, triesVisitante, eventos, fuerzaLocal: Math.round(local.ataque), fuerzaVisitante: Math.round(visitante.ataque) };
+  return { puntosLocal, puntosVisitante, triesLocal, triesVisitante, eventos, fuerzaLocal: Math.round(local.ataque), fuerzaVisitante: Math.round(visitante.ataque), titularesLocal: local.titulares, titularesVisitante: visitante.titulares };
 }
 
 export function simularPartido(jugadoresLocal, jugadoresVisitante) {
@@ -211,32 +248,24 @@ export function simularPartido(jugadoresLocal, jugadoresVisitante) {
   let triesVisitante = 0;
   const eventos = [];
 
-  // 16 intervalos de 5 minutos = 80 minutos
   for (let minuto = 5; minuto <= 80; minuto += 5) {
     const evLocal = simularPeriodo(ataqueLocal, visitante.defensa);
     if (evLocal) {
       puntosLocal += evLocal.puntos;
       triesLocal += evLocal.tries;
-      eventos.push({ minuto, equipo: 'local', ...evLocal });
+      const anotador = seleccionarAnotador(local.titulares, evLocal.tipo);
+      eventos.push({ minuto, equipo: 'local', ...evLocal, jugadorId: anotador?.id ?? null, jugadorNombre: anotador ? `${anotador.nombre} ${anotador.apellido}` : null });
     }
-
     const evVisitante = simularPeriodo(visitante.ataque, defensaLocal);
     if (evVisitante) {
       puntosVisitante += evVisitante.puntos;
       triesVisitante += evVisitante.tries;
-      eventos.push({ minuto, equipo: 'visitante', ...evVisitante });
+      const anotador = seleccionarAnotador(visitante.titulares, evVisitante.tipo);
+      eventos.push({ minuto, equipo: 'visitante', ...evVisitante, jugadorId: anotador?.id ?? null, jugadorNombre: anotador ? `${anotador.nombre} ${anotador.apellido}` : null });
     }
   }
 
-  return {
-    puntosLocal,
-    puntosVisitante,
-    triesLocal,
-    triesVisitante,
-    eventos,
-    fuerzaLocal: Math.round(local.ataque),
-    fuerzaVisitante: Math.round(visitante.ataque),
-  };
+  return { puntosLocal, puntosVisitante, triesLocal, triesVisitante, eventos, fuerzaLocal: Math.round(local.ataque), fuerzaVisitante: Math.round(visitante.ataque), titularesLocal: local.titulares, titularesVisitante: visitante.titulares };
 }
 
 // Calcula puntos de tabla (sistema URBA/World Rugby)

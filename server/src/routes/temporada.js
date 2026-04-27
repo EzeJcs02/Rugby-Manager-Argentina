@@ -130,7 +130,7 @@ router.post('/finalizar', async (_req, res) => {
         await prisma.jugador.update({ where: { id: j.id }, data: { clubId: null } });
       } else {
         const decaimiento = j.edad >= 32 ? { motor: Math.max(j.motor - 1, 40), velocidad: Math.max(j.velocidad - 1, 40) } : {};
-        await prisma.jugador.update({ where: { id: j.id }, data: { edad: j.edad + 1, moral: 75, ...decaimiento } });
+        await prisma.jugador.update({ where: { id: j.id }, data: { edad: j.edad + 1, moral: 75, lesionadoHasta: null, ...decaimiento } });
       }
     }
 

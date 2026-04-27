@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getJugadores, getFormacion, guardarFormacion } from '../api/client.js';
+import { getJugadores, getFormacion, guardarFormacion, getJornadas } from '../api/client.js';
 
 const POSICIONES_NUM = {
   1:  { label: 'Pilar Izq',    pos: 'Pilar Izq' },
@@ -68,11 +68,16 @@ function PickerModal({ numero, jugadores, onSelect, onClose }) {
   const renderRow = (j) => (
     <button
       key={j.id}
-      onClick={() => onSelect(j.id)}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors text-left"
+      onClick={() => !j._lesionado && onSelect(j.id)}
+      disabled={j._lesionado}
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left
+        ${j._lesionado ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-700'}`}
     >
       <div className="flex-1">
-        <p className="text-white text-sm font-medium">{j.nombre} {j.apellido}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-white text-sm font-medium">{j.nombre} {j.apellido}</p>
+          {j._lesionado && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">Lesionado</span>}
+        </div>
         <p className="text-gray-400 text-xs">{j.posicion} · {j.edad} años · moral {j.moral}</p>
       </div>
       <div className="text-right">
@@ -119,12 +124,16 @@ export default function Formacion({ clubId }) {
   const [editando, setEditando] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  const [jornadaActual, setJornadaActual] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getJugadores(clubId), getFormacion(clubId)]).then(([js, form]) => {
-      setJugadores(js);
-      if (form?.datos && typeof form.datos === 'object') {
+    Promise.all([getJugadores(clubId), getFormacion(clubId), getJornadas()]).then(([js, form, jornadas]) => {
+      const activa = jornadas.find(j => j.jugados < j.total) ?? jornadas[jornadas.length - 1];
+      const jNum = activa?.numero ?? 1;
+      setJornadaActual(jNum);
+      setJugadores(js.map(j => ({ ...j, _lesionado: j.lesionadoHasta != null && j.lesionadoHasta >= jNum })));
+      if (form?.datos && typeof form.datos === 'object' && !Array.isArray(form.datos)) {
         const parsed = {};
         for (const [k, v] of Object.entries(form.datos)) {
           parsed[parseInt(k)] = v;

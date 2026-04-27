@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { getClub, getTabla, getJornadas } from '../api/client.js';
+import { useNavigate } from 'react-router-dom';
+import { getClub, getTabla, getJornadas, getNoticias, leerTodasNoticias, getOfertas } from '../api/client.js';
+
+const TIPO_ICONO = {
+  lesion:  '🩹',
+  sponsor: '💰',
+  moral:   '💬',
+  oferta:  '📨',
+  mercado: '✅',
+};
 
 function StatItem({ label, value, sub }) {
   return (
@@ -15,13 +24,26 @@ export default function Dashboard({ clubId }) {
   const [club, setClub] = useState(null);
   const [tablaData, setTablaData] = useState(null);
   const [jornadas, setJornadas] = useState([]);
+  const [noticias, setNoticias] = useState([]);
+  const [ofertas, setOfertas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([getClub(clubId), getTabla(), getJornadas()])
-      .then(([c, t, j]) => { setClub(c); setTablaData(t); setJornadas(j); })
+    Promise.all([getClub(clubId), getTabla(), getJornadas(), getNoticias(clubId), getOfertas(clubId)])
+      .then(([c, t, j, n, o]) => {
+        setClub(c); setTablaData(t); setJornadas(j);
+        setNoticias(n); setOfertas(o);
+      })
       .finally(() => setLoading(false));
   }, [clubId]);
+
+  const noLeidas = noticias.filter(n => !n.leida).length;
+
+  const handleLeerTodas = async () => {
+    await leerTodasNoticias(clubId);
+    setNoticias(prev => prev.map(n => ({ ...n, leida: true })));
+  };
 
   if (loading) return <div className="text-gray-500 animate-pulse py-20 text-center">Cargando...</div>;
   if (!club) return null;
@@ -49,6 +71,25 @@ export default function Dashboard({ clubId }) {
         </div>
       </div>
 
+      {/* Ofertas recibidas banner */}
+      {ofertas.length > 0 && (
+        <div
+          className="card border-yellow-500/40 bg-yellow-900/20 cursor-pointer hover:bg-yellow-900/30 transition-colors"
+          onClick={() => navigate('/transferencias')}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📨</span>
+            <div className="flex-1">
+              <p className="font-bold text-yellow-300">
+                {ofertas.length === 1 ? '1 oferta recibida' : `${ofertas.length} ofertas recibidas`}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">Un rival quiere comprar a uno de tus jugadores</p>
+            </div>
+            <span className="text-yellow-400 text-sm">→</span>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       {miStats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -71,7 +112,7 @@ export default function Dashboard({ clubId }) {
           <p className="text-gray-400 text-sm">
             {jornadaActual.jugados < jornadaActual.total
               ? `Quedan ${jornadaActual.total - jornadaActual.jugados} partido(s) por jugar.`
-              : 'Jornada completada.'}
+              : 'Jornada completada. Podés avanzar a la siguiente.'}
           </p>
         </div>
       )}
@@ -94,14 +135,51 @@ export default function Dashboard({ clubId }) {
                 <span className="text-sm font-bold text-rugby-green">{row.puntos} pts</span>
               </div>
             ))}
-            {tablaData.tabla.length > 4 && (
-              <p className="text-xs text-gray-600 text-center pt-1">
-                Ver tabla completa →
-              </p>
-            )}
           </div>
         </div>
       )}
+
+      {/* Noticias */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-white">Noticias del club</h2>
+            {noLeidas > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{noLeidas}</span>
+            )}
+          </div>
+          {noLeidas > 0 && (
+            <button onClick={handleLeerTodas} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+              Marcar todas como leídas
+            </button>
+          )}
+        </div>
+
+        {noticias.length === 0 ? (
+          <p className="text-gray-600 text-sm text-center py-4">
+            No hay noticias. Jugá una jornada para ver eventos.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {noticias.slice(0, 8).map(n => (
+              <div
+                key={n.id}
+                className={`flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors
+                  ${!n.leida ? 'bg-gray-800/80 border border-gray-700' : 'bg-gray-900/40'}`}
+              >
+                <span className="text-lg flex-shrink-0 mt-0.5">{TIPO_ICONO[n.tipo] ?? '📢'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${n.leida ? 'text-gray-400' : 'text-white'}`}>{n.texto}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {new Date(n.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+                {!n.leida && <div className="w-1.5 h-1.5 rounded-full bg-rugby-green flex-shrink-0 mt-2" />}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
