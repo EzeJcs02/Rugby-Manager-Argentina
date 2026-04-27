@@ -5,6 +5,8 @@ import clubsRouter from './routes/clubs.js';
 import temporadaRouter from './routes/temporada.js';
 import partidosRouter from './routes/partidos.js';
 import transferenciasRouter from './routes/transferencias.js';
+import formacionRouter from './routes/formacion.js';
+import entrenamientoRouter from './routes/entrenamiento.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +20,8 @@ app.use('/api/clubs', clubsRouter);
 app.use('/api/temporada', temporadaRouter);
 app.use('/api/partidos', partidosRouter);
 app.use('/api/transferencias', transferenciasRouter);
+app.use('/api/formacion', formacionRouter);
+app.use('/api/entrenamiento', entrenamientoRouter);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

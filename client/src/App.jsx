@@ -7,6 +7,8 @@ import Plantel from './pages/Plantel.jsx';
 import Jornada from './pages/Jornada.jsx';
 import Tabla from './pages/Tabla.jsx';
 import Transferencias from './pages/Transferencias.jsx';
+import Formacion from './pages/Formacion.jsx';
+import Entrenamiento from './pages/Entrenamiento.jsx';
 
 export default function App() {
   const [clubId, setClubId] = useState(() => {
@@ -36,6 +38,8 @@ export default function App() {
         <Route path="/jornada" element={<Jornada clubId={clubId} />} />
         <Route path="/tabla" element={<Tabla clubId={clubId} />} />
         <Route path="/transferencias" element={<Transferencias clubId={clubId} />} />
+        <Route path="/formacion" element={<Formacion clubId={clubId} />} />
+        <Route path="/entrenamiento" element={<Entrenamiento clubId={clubId} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

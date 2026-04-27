@@ -91,6 +91,112 @@ function simularPeriodo(ataqueA, defensaB) {
   }
 }
 
+const TACTICAS = {
+  ataque:  { ataqueMulti: 1.10, defensaMulti: 0.93 },
+  neutro:  { ataqueMulti: 1.00, defensaMulti: 1.00 },
+  defensa: { ataqueMulti: 0.93, defensaMulti: 1.10 },
+};
+
+function seleccionarTitularesConFormacion(jugadores, datosFormacion) {
+  // datosFormacion: { "1": jugadorId, "9": jugadorId, ... }
+  const mapa = {
+    1: 'Pilar Izq', 2: 'Hooker', 3: 'Pilar Der',
+    4: 'Segunda Línea', 5: 'Segunda Línea',
+    6: 'Ala', 7: 'Ala', 8: 'Octavo',
+    9: 'Medio Scrum', 10: 'Apertura',
+    11: 'Wing', 12: 'Centro', 13: 'Centro',
+    14: 'Wing', 15: 'Fullback',
+  };
+
+  const jugadoresMap = Object.fromEntries(jugadores.map(j => [j.id, j]));
+  const usados = new Set();
+  const titulares = [];
+
+  for (const [num, pos] of Object.entries(mapa)) {
+    const numInt = parseInt(num);
+    const jugadorIdAsignado = datosFormacion?.[num] ?? datosFormacion?.[numInt];
+    let elegido = null;
+
+    if (jugadorIdAsignado && jugadoresMap[jugadorIdAsignado] && !usados.has(jugadorIdAsignado)) {
+      elegido = jugadoresMap[jugadorIdAsignado];
+    } else {
+      const candidatos = jugadores
+        .filter(j => j.posicion === pos && !usados.has(j.id))
+        .sort((a, b) => calcularPuntajeJugador(b) - calcularPuntajeJugador(a));
+      elegido = candidatos[0] ?? null;
+    }
+
+    if (elegido) {
+      usados.add(elegido.id);
+      titulares.push({ ...elegido, numeroTitular: numInt });
+    }
+  }
+  return titulares;
+}
+
+function calcularFuerzaEquipoConFormacion(jugadores, datosFormacion, tactica = 'neutro') {
+  const titulares = seleccionarTitularesConFormacion(jugadores, datosFormacion);
+  const moralProm = jugadores.length ? jugadores.reduce((s, j) => s + j.moral, 0) / jugadores.length : 75;
+  const bonusMoral = (moralProm - 75) * 0.005;
+  const mult = TACTICAS[tactica] ?? TACTICAS.neutro;
+
+  let ataque = 0;
+  let defensa = 0;
+
+  for (const j of titulares) {
+    const score = calcularPuntajeJugador(j);
+    const grupo = PESOS_POSICION[j.posicion]?.grupo ?? 'trasera';
+    if (grupo === 'delantera') {
+      ataque += score * 0.40;
+      defensa += score * 0.60;
+    } else {
+      ataque += score * 0.65;
+      defensa += score * 0.35;
+    }
+  }
+
+  const norm = titulares.length || 15;
+  return {
+    ataque: (ataque / norm) * (1 + bonusMoral) * mult.ataqueMulti,
+    defensa: (defensa / norm) * (1 + bonusMoral) * mult.defensaMulti,
+    titulares,
+  };
+}
+
+export function simularPartidoConFormacion(jugadoresLocal, jugadoresVisitante, formacionLocal = {}, formacionVisitante = {}) {
+  const tacticaLocal = formacionLocal.tactica ?? 'neutro';
+  const tacticaVisitante = formacionVisitante.tactica ?? 'neutro';
+  const local = calcularFuerzaEquipoConFormacion(jugadoresLocal, formacionLocal.datos, tacticaLocal);
+  const visitante = calcularFuerzaEquipoConFormacion(jugadoresVisitante, formacionVisitante.datos, tacticaVisitante);
+
+  const VENTAJA_LOCAL = 1.06;
+  const ataqueLocal = local.ataque * VENTAJA_LOCAL;
+  const defensaLocal = local.defensa * VENTAJA_LOCAL;
+
+  let puntosLocal = 0;
+  let puntosVisitante = 0;
+  let triesLocal = 0;
+  let triesVisitante = 0;
+  const eventos = [];
+
+  for (let minuto = 5; minuto <= 80; minuto += 5) {
+    const evLocal = simularPeriodo(ataqueLocal, visitante.defensa);
+    if (evLocal) {
+      puntosLocal += evLocal.puntos;
+      triesLocal += evLocal.tries;
+      eventos.push({ minuto, equipo: 'local', ...evLocal });
+    }
+    const evVisitante = simularPeriodo(visitante.ataque, defensaLocal);
+    if (evVisitante) {
+      puntosVisitante += evVisitante.puntos;
+      triesVisitante += evVisitante.tries;
+      eventos.push({ minuto, equipo: 'visitante', ...evVisitante });
+    }
+  }
+
+  return { puntosLocal, puntosVisitante, triesLocal, triesVisitante, eventos, fuerzaLocal: Math.round(local.ataque), fuerzaVisitante: Math.round(visitante.ataque) };
+}
+
 export function simularPartido(jugadoresLocal, jugadoresVisitante) {
   const local = calcularFuerzaEquipo(jugadoresLocal);
   const visitante = calcularFuerzaEquipo(jugadoresVisitante);

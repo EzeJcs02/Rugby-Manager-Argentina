@@ -19,3 +19,10 @@ export const simularJornada = (num) => api.post(`/partidos/jornada/${num}/simula
 export const getMercado = () => api.get('/transferencias/mercado').then(r => r.data);
 export const getTransferencias = (clubId) => api.get(`/transferencias/${clubId}`).then(r => r.data);
 export const crearTransferencia = (data) => api.post('/transferencias', data).then(r => r.data);
+
+export const getFormacion = (clubId) => api.get(`/formacion/${clubId}`).then(r => r.data);
+export const guardarFormacion = (clubId, data) => api.put(`/formacion/${clubId}`, data).then(r => r.data);
+
+export const entrenar = (data) => api.post('/entrenamiento', data).then(r => r.data);
+
+export const finalizarTemporada = () => api.post('/temporada/finalizar').then(r => r.data);

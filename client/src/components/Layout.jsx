@@ -5,6 +5,8 @@ import { getClub } from '../api/client.js';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '🏠' },
   { to: '/plantel', label: 'Plantel', icon: '👥' },
+  { to: '/formacion', label: 'Formación', icon: '🔰' },
+  { to: '/entrenamiento', label: 'Entrenamiento', icon: '💪' },
   { to: '/jornada', label: 'Jornada', icon: '🏉' },
   { to: '/tabla', label: 'Tabla', icon: '📊' },
   { to: '/transferencias', label: 'Transferencias', icon: '🔄' },

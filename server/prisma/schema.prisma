@@ -19,11 +19,12 @@ model Club {
   color1      String  @default("#003087")
   color2      String  @default("#FFFFFF")
 
-  jugadores          Jugador[]
-  partidosLocal      Partido[]       @relation("Local")
-  partidosVisitante  Partido[]       @relation("Visitante")
+  jugadores             Jugador[]
+  partidosLocal         Partido[]       @relation("Local")
+  partidosVisitante     Partido[]       @relation("Visitante")
   transferenciasOrigen  Transferencia[] @relation("ClubOrigen")
   transferenciasDestino Transferencia[] @relation("ClubDestino")
+  formacion             Formacion?
 
   @@map("clubs")
 }
@@ -58,6 +59,16 @@ model Jugador {
   @@map("jugadores")
 }
 
+model Formacion {
+  id      Int    @id @default(autoincrement())
+  clubId  Int    @unique
+  club    Club   @relation(fields: [clubId], references: [id])
+  datos   Json   @default("{}")
+  tactica String @default("neutro")
+
+  @@map("formaciones")
+}
+
 model Temporada {
   id     Int     @id @default(autoincrement())
   nombre String
@@ -70,19 +81,20 @@ model Temporada {
 }
 
 model Partido {
-  id              Int      @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   temporadaId     Int
   temporada       Temporada @relation(fields: [temporadaId], references: [id])
   clubLocalId     Int
-  clubLocal       Club     @relation("Local", fields: [clubLocalId], references: [id])
+  clubLocal       Club      @relation("Local", fields: [clubLocalId], references: [id])
   clubVisitanteId Int
-  clubVisitante   Club     @relation("Visitante", fields: [clubVisitanteId], references: [id])
+  clubVisitante   Club      @relation("Visitante", fields: [clubVisitanteId], references: [id])
   jornada         Int
-  jugado          Boolean  @default(false)
+  jugado          Boolean   @default(false)
   puntosLocal     Int?
   puntosVisitante Int?
   triesLocal      Int?
   triesVisitante  Int?
+  eventos         Json?
 
   @@map("partidos")
 }
