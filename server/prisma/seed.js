@@ -2,252 +2,232 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const PERFILES = {
-  'Pilar Izq':    { scrum: 80, lineout: 58, tackle: 70, velocidad: 44, pase: 50, pie: 44, vision: 50, potencia: 82, motor: 72, liderazgo: 60 },
-  'Hooker':       { scrum: 76, lineout: 80, tackle: 70, velocidad: 50, pase: 55, pie: 50, vision: 55, potencia: 74, motor: 74, liderazgo: 66 },
-  'Pilar Der':    { scrum: 84, lineout: 58, tackle: 72, velocidad: 42, pase: 48, pie: 42, vision: 48, potencia: 84, motor: 70, liderazgo: 58 },
-  'Segunda Línea':{ scrum: 64, lineout: 84, tackle: 70, velocidad: 50, pase: 48, pie: 48, vision: 52, potencia: 82, motor: 80, liderazgo: 62 },
-  'Ala':          { scrum: 54, lineout: 64, tackle: 84, velocidad: 68, pase: 55, pie: 52, vision: 58, potencia: 74, motor: 84, liderazgo: 60 },
-  'Octavo':       { scrum: 58, lineout: 64, tackle: 82, velocidad: 70, pase: 62, pie: 55, vision: 65, potencia: 78, motor: 82, liderazgo: 70 },
-  'Medio Scrum':  { scrum: 40, lineout: 38, tackle: 60, velocidad: 80, pase: 90, pie: 66, vision: 84, potencia: 54, motor: 70, liderazgo: 74 },
-  'Apertura':     { scrum: 38, lineout: 38, tackle: 58, velocidad: 72, pase: 86, pie: 86, vision: 86, potencia: 54, motor: 64, liderazgo: 82 },
-  'Wing':         { scrum: 34, lineout: 34, tackle: 64, velocidad: 92, pase: 62, pie: 68, vision: 70, potencia: 62, motor: 64, liderazgo: 54 },
-  'Centro':       { scrum: 42, lineout: 40, tackle: 76, velocidad: 78, pase: 72, pie: 62, vision: 72, potencia: 72, motor: 72, liderazgo: 65 },
-  'Fullback':     { scrum: 36, lineout: 36, tackle: 68, velocidad: 84, pase: 68, pie: 84, vision: 82, potencia: 62, motor: 68, liderazgo: 66 },
-};
-
-function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-function clamp(v) { return Math.max(1, Math.min(99, v)); }
-
-function crearAtributos(posicion, calidad = 1.0) {
-  const base = PERFILES[posicion];
-  const attrs = {};
-  for (const [k, v] of Object.entries(base)) {
-    attrs[k] = clamp(Math.round((v + rand(-8, 8)) * calidad));
-  }
-  return attrs;
+// p(nombre, apellido, edad, posicion, scrum, lineout, tackle, velocidad, pase, pie, vision, potencia, motor, liderazgo)
+function p(nombre, apellido, edad, posicion, sc, li, ta, ve, pa, pi, vi, po, mo, ld) {
+  const valor = Math.round((sc + li + ta + ve + pa + pi + vi + po + mo + ld) / 10 * 8000);
+  return {
+    nombre, apellido, edad, posicion, moral: 80, valor,
+    scrum: sc, lineout: li, tackle: ta, velocidad: ve,
+    pase: pa, pie: pi, vision: vi, potencia: po, motor: mo, liderazgo: ld,
+  };
 }
-
-function calcularValor(attrs) {
-  const prom = Object.values(attrs).reduce((a, b) => a + b, 0) / 10;
-  return Math.round(prom * 8000 * (0.85 + Math.random() * 0.3));
-}
-
-function j(nombre, apellido, edad, posicion, numero, calidad = 1.0) {
-  const attrs = crearAtributos(posicion, calidad);
-  return { nombre, apellido, edad, posicion, numero, ...attrs, valor: calcularValor(attrs), moral: rand(70, 92) };
-}
-
-// ─── PLANTELES ────────────────────────────────────────────────────────────────
 
 const planteles = {
 
-  // ── PAMPAS (San Isidro, Buenos Aires) ─────────────────────────────────────
+  // ── PAMPAS 2025 (Buenos Aires) ─────────────────────────────────────────────
   'Pampas': [
-    j('Nahuel',    'Tetaz Chaparro', 28, 'Pilar Izq',    1,  1.02),
-    j('Julián',    'Montoya',        30, 'Hooker',       2,  1.04),
-    j('Francisco', 'Gómez Kodela',   26, 'Pilar Der',    3,  1.02),
-    j('Guido',     'Petti',          29, 'Segunda Línea',4,  1.02),
-    j('Tomás',     'Lavanini',       29, 'Segunda Línea',5,  1.01),
-    j('Marcos',    'Kremer',         27, 'Ala',          6,  1.03),
-    j('Pablo',     'Matera',         31, 'Ala',          7,  1.04),
-    j('Facundo',   'Isa',            32, 'Octavo',       8,  1.01),
-    j('Gonzalo',   'Bertranou',      29, 'Medio Scrum',  9,  1.04),
-    j('Santiago',  'Carreras',       26, 'Apertura',     10, 1.03),
-    j('Santiago',  'Pernas',         27, 'Wing',         11, 1.01),
-    j('Jerónimo',  'de la Fuente',   31, 'Centro',       12, 1.01),
-    j('Agustín',   'Fraga',          26, 'Centro',       13, 1.01),
-    j('Rodrigo',   'Bruni',          27, 'Ala',          6,  1.00),
-    j('Juan Cruz', 'Mallía',         25, 'Fullback',     15, 1.03),
-    j('Santiago',  'Cordero',        32, 'Wing',         14, 0.99),
-    j('Tomás',     'Albornoz',       26, 'Apertura',     10, 0.97),
-    j('Lautaro',   'Bazán Vélez',    23, 'Medio Scrum',  9,  0.95),
-    j('Ignacio',   'Mendy',          24, 'Wing',         14, 0.95),
-    j('Lucio',     'Sordoni',        24, 'Segunda Línea',4,  0.94),
-    j('Felipe',    'Aramendia',      24, 'Pilar Izq',    1,  0.93),
-    j('Tobías',    'Wade',           24, 'Fullback',     15, 0.92),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Javier',     'Corvalán',           26, 'Pilar Izq',    86, 56, 74, 44, 50, 44, 50, 86, 74, 64),
+    p('Ignacio',    'Bottazzini',         25, 'Hooker',       78, 84, 72, 50, 56, 48, 56, 76, 76, 62),
+    p('Matías',     'Medrano',            28, 'Pilar Der',    84, 58, 72, 42, 48, 42, 48, 84, 70, 62),
+    p('Federico',   'Lavanini',           27, 'Segunda Línea',66, 88, 74, 52, 50, 48, 54, 84, 82, 72),
+    p('Franco',     'Carrera',            25, 'Segunda Línea',62, 82, 70, 50, 48, 46, 52, 80, 78, 64),
+    p('Eliseo',     'Morales',            26, 'Ala',          56, 66, 86, 70, 58, 52, 62, 74, 88, 70),
+    p('Nicolás',    "D'Amorim",           25, 'Ala',          54, 62, 84, 70, 56, 50, 60, 72, 86, 66),
+    p('Bruno',      'Heit',               26, 'Octavo',       60, 64, 82, 66, 62, 52, 64, 78, 82, 70),
+    p('Ignacio',    'Inchauspe',          27, 'Medio Scrum',  40, 38, 62, 84, 92, 68, 90, 56, 78, 84),
+    p('Bautista',   'Bosch',              26, 'Apertura',     38, 38, 60, 76, 86, 88, 86, 54, 68, 82),
+    p('Francisco',  'González Capdevila', 24, 'Wing',         34, 34, 64, 90, 60, 66, 68, 62, 68, 58),
+    p('Justo',      'Piccardo',           25, 'Centro',       44, 42, 78, 78, 74, 64, 76, 74, 72, 70),
+    p('Juan Pablo', 'Castro',             26, 'Centro',       42, 40, 76, 76, 70, 60, 70, 70, 70, 64),
+    p('Alfonso',    'Latorre',            24, 'Wing',         32, 32, 62, 88, 58, 62, 66, 58, 64, 54),
+    p('Juan Pedro', 'Bernasconi',         25, 'Fullback',     38, 40, 72, 90, 72, 88, 86, 64, 74, 72),
+    p('Francisco',  'Lusarreta',          24, 'Pilar Izq',    80, 52, 68, 40, 44, 40, 44, 80, 66, 56),
+    p('Ramiro',     'Gurovich',           25, 'Hooker',       72, 78, 66, 46, 50, 44, 50, 68, 68, 56),
+    p('Leo',        'Mazzini',            24, 'Segunda Línea',58, 78, 66, 46, 44, 42, 48, 76, 74, 58),
+    p('Marcelo',    'Toledo',             27, 'Ala',          50, 58, 78, 62, 50, 46, 52, 68, 76, 58),
+    p('Joaquín',    'Moro',               26, 'Octavo',       56, 60, 78, 62, 58, 48, 58, 72, 76, 66),
+    p('Lautaro',    'Bazán Vélez',        23, 'Medio Scrum',  38, 36, 58, 80, 84, 62, 80, 52, 70, 68),
+    p('Tomás',      'Albornoz',           26, 'Apertura',     36, 36, 54, 70, 78, 80, 76, 50, 62, 66),
   ],
 
-  // ── DOGOS XV (Córdoba) — Campeones 2024 ───────────────────────────────────
+  // ── DOGOS XV 2025 (Córdoba) ────────────────────────────────────────────────
   'Dogos XV': [
-    j('Valentín',  'Cabral',          26, 'Ala',          6,  1.00),
-    j('Mayco',     'Vivas',           30, 'Pilar Izq',    1,  0.99),
-    j('Joel',      'Sclavi',          28, 'Pilar Der',    3,  0.99),
-    j('Matías',    'Alemanno',        29, 'Segunda Línea',4,  0.98),
-    j('Lucas',     'Paulos',          27, 'Segunda Línea',5,  0.97),
-    j('Juan Martín','González',       24, 'Ala',          7,  0.99),
-    j('Tomás',     'Lezana',          28, 'Octavo',       8,  0.98),
-    j('Carlos',    'Muzzio',          29, 'Ala',          6,  0.98),
-    j('Gonzalo',   'García',          27, 'Medio Scrum',  9,  0.97),
-    j('Giuliano',  'Avaca',           26, 'Apertura',     10, 0.97),
-    j('Bautista',  'Delguy',          28, 'Wing',         11, 0.98),
-    j('Faustino',  'Sánchez Valarolo',25, 'Centro',       12, 0.98),
-    j('Agustín',   'Segura',          26, 'Centro',       13, 0.97),
-    j('Santiago',  'Grondona',        25, 'Ala',          7,  0.96),
-    j('Joaquín',   'Tuculet',         32, 'Fullback',     15, 0.97),
-    j('Ramiro',    'Moyano',          31, 'Wing',         14, 0.96),
-    j('Nicolás',   'Sánchez',         33, 'Apertura',     10, 0.95),
-    j('Tomás',     'Passerotti',      25, 'Medio Scrum',  9,  0.94),
-    j('Luciano',   'Torres',          22, 'Wing',         11, 0.91),
-    j('Agustín',   'Flores',          24, 'Hooker',       2,  0.91),
-    j('Rodrigo',   'Martínez',        23, 'Pilar Izq',    1,  0.89),
-    j('Diego',     'Portillo',        24, 'Hooker',       2,  0.88),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Diego',      'Correa',             27, 'Pilar Izq',    84, 56, 72, 42, 48, 42, 48, 84, 70, 60),
+    p('Juan',       'Greising Revol',     26, 'Hooker',       76, 84, 70, 50, 54, 46, 54, 74, 74, 62),
+    p('Boris',      'Wenger',             27, 'Pilar Der',    84, 58, 72, 42, 48, 42, 48, 84, 70, 60),
+    p('Tomás',      'Bartolini',          26, 'Segunda Línea',62, 82, 70, 50, 48, 46, 52, 80, 78, 64),
+    p('Alejandro',  'Barrios',            25, 'Segunda Línea',60, 80, 68, 48, 46, 44, 50, 78, 76, 62),
+    p('Valentín',   'Cabral',             26, 'Ala',          54, 64, 84, 68, 58, 52, 60, 72, 84, 64),
+    p('Aitor',      'Bildosola',          24, 'Ala',          52, 62, 82, 66, 56, 50, 58, 70, 82, 62),
+    p('Octavio',    'Barbatti',           26, 'Octavo',       58, 62, 80, 64, 60, 50, 62, 74, 78, 68),
+    p('Agustín',    'Moyano',             25, 'Medio Scrum',  38, 36, 58, 80, 84, 64, 82, 52, 70, 72),
+    p('Efraín',     'Elías',              26, 'Apertura',     38, 38, 58, 74, 84, 86, 84, 54, 66, 80),
+    p('Lautaro',    'Cipriani',           23, 'Wing',         32, 32, 62, 90, 58, 64, 68, 60, 66, 54),
+    p('Agustín',    'Segura',             26, 'Centro',       42, 40, 76, 76, 70, 60, 72, 70, 70, 64),
+    p('Martín',     'Renzo',              25, 'Centro',       40, 38, 74, 74, 68, 58, 70, 68, 68, 62),
+    p('Ramiro',     'Valdes',             24, 'Wing',         30, 30, 60, 88, 56, 62, 64, 58, 64, 52),
+    p('Valentino',  'Di Capua',           23, 'Fullback',     34, 34, 66, 86, 66, 80, 78, 60, 68, 62),
+    p('Santiago',   'Pulella',            24, 'Pilar Izq',    78, 52, 66, 40, 44, 40, 44, 78, 64, 54),
+    p('Leonel',     'Oviedo',             25, 'Hooker',       70, 76, 64, 46, 48, 44, 48, 66, 66, 56),
+    p('Genaro',     'Podestá',            24, 'Segunda Línea',56, 74, 64, 44, 42, 40, 46, 72, 70, 54),
+    p('Lautaro',    'Simes',              23, 'Ala',          48, 58, 76, 62, 50, 46, 52, 66, 74, 54),
+    p('Juan',       'Sagrera',            25, 'Ala',          50, 60, 76, 62, 52, 46, 52, 68, 74, 56),
+    p('Julián',     'Hernández',          24, 'Medio Scrum',  34, 32, 52, 74, 76, 58, 72, 46, 64, 60),
+    p('Gastón',     'Revol',              23, 'Wing',         28, 28, 56, 84, 52, 58, 60, 52, 60, 48),
   ],
 
-  // ── PEÑAROL RUGBY (Montevideo, Uruguay) — 3x Campeones ───────────────────
+  // ── PEÑAROL RUGBY 2024 (Montevideo, Uruguay) ───────────────────────────────
   'Peñarol Rugby': [
-    j('Felipe',    'Aliaga',          29, 'Segunda Línea',4,  0.96),
-    j('Foster',    'DeWitt',          28, 'Pilar Izq',    1,  0.95),
-    j('Germán',    'Kessler',         28, 'Hooker',       2,  0.94),
-    j('Diego',     'Arbelo',          30, 'Pilar Der',    3,  0.94),
-    j('Manuel',    'Ardao',           27, 'Segunda Línea',5,  0.93),
-    j('Santiago',  'Civetta',         27, 'Ala',          6,  0.93),
-    j('Lucas',     'Bianchi',         26, 'Ala',          7,  0.93),
-    j('Diego',     'Magno',           28, 'Octavo',       8,  0.94),
-    j('Nicolás',   'Martín',          27, 'Medio Scrum',  9,  0.93),
-    j('Felipe',    'Berchesi',        26, 'Apertura',     10, 0.94),
-    j('Ignacio',   'Facciolo',        25, 'Wing',         11, 0.92),
-    j('Andrés',    'Vilaseca',        28, 'Centro',       12, 0.93),
-    j('Martín',    'Landajo',         32, 'Centro',       13, 0.92),
-    j('Santiago',  'Arata',           25, 'Wing',         14, 0.91),
-    j('Joaquín',   'Pissano',         26, 'Fullback',     15, 0.93),
-    j('Guillermo', 'Pujadas',         30, 'Ala',          7,  0.89),
-    j('Iñaki',     'Martínez',        23, 'Hooker',       2,  0.88),
-    j('Facundo',   'Etcheberry',      24, 'Medio Scrum',  9,  0.87),
-    j('Diego',     'Ormaechea',       25, 'Apertura',     10, 0.86),
-    j('Leandro',   'Leivas',          22, 'Wing',         11, 0.86),
-    j('Pablo',     'Lemoine Jr.',     24, 'Pilar Izq',    1,  0.85),
-    j('Agustín',   'Ormaechea',       23, 'Segunda Línea',5,  0.85),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Santiago',   'Cagnone',            28, 'Pilar Izq',    80, 54, 70, 42, 46, 42, 46, 80, 66, 60),
+    p('Bautista',   'Hontou',             26, 'Hooker',       72, 78, 66, 48, 52, 46, 52, 70, 70, 62),
+    p('Diego',      'Ardao',              30, 'Pilar Der',    80, 56, 70, 40, 46, 40, 46, 80, 66, 60),
+    p('Felipe',     'Aliaga',             29, 'Segunda Línea',60, 82, 70, 50, 48, 46, 52, 80, 78, 68),
+    p('Koba',       'Brazionis',          28, 'Segunda Línea',58, 80, 68, 48, 46, 44, 50, 78, 76, 64),
+    p('Santiago',   'Civetta',            30, 'Ala',          54, 64, 84, 68, 58, 52, 62, 72, 84, 82),
+    p('Lucas',      'Bianchi',            26, 'Ala',          52, 62, 82, 66, 56, 50, 58, 70, 82, 64),
+    p('Manuel',     'Diana',              31, 'Octavo',       58, 62, 80, 62, 60, 50, 60, 74, 78, 72),
+    p('Tomás',      'Etcheverry',         25, 'Medio Scrum',  36, 34, 56, 78, 80, 60, 78, 50, 66, 68),
+    p('Mateo',      'Sanguinetti',        26, 'Apertura',     36, 36, 56, 70, 80, 82, 80, 50, 62, 72),
+    p('Ignacio',    'Facciolo',           25, 'Wing',         32, 32, 62, 86, 58, 62, 66, 58, 64, 54),
+    p('Juan',       'Tafernaberry',       29, 'Centro',       40, 38, 74, 74, 70, 60, 70, 70, 68, 66),
+    p('Mateo',      'Perillo',            24, 'Centro',       38, 36, 70, 72, 66, 58, 66, 66, 66, 60),
+    p('Gastón',     'Mieres',             34, 'Wing',         34, 34, 66, 84, 62, 66, 70, 62, 62, 76),
+    p('Mateo',      'Viñals',             25, 'Fullback',     34, 34, 64, 80, 64, 78, 76, 58, 64, 64),
+    p('Carlos',     'Deus',               27, 'Pilar Izq',    74, 50, 64, 38, 42, 38, 42, 74, 60, 52),
+    p('Pedro',      'Hoblog',             26, 'Hooker',       66, 72, 60, 44, 46, 42, 46, 62, 62, 52),
+    p('James',      'Mc Cubbin',          28, 'Segunda Línea',54, 72, 64, 44, 42, 40, 46, 70, 68, 56),
+    p('Baltazar',   'Amaya',              24, 'Ala',          48, 56, 74, 60, 48, 44, 50, 64, 72, 52),
+    p('Dante',      'Soto',               25, 'Octavo',       52, 56, 74, 58, 54, 46, 54, 68, 72, 58),
+    p('Santiago',   'Gini',               24, 'Medio Scrum',  32, 30, 50, 72, 72, 54, 68, 44, 60, 56),
+    p('Manuel',     'Rosmarino',          23, 'Wing',         28, 28, 56, 80, 52, 54, 58, 50, 58, 46),
   ],
 
-  // ── SELKNAM (Santiago, Chile) ─────────────────────────────────────────────
+  // ── SELKNAM 2024 (Santiago, Chile) ────────────────────────────────────────
   'Selknam': [
-    j('Clemente',  'Saavedra',        26, 'Ala',          6,  0.92),
-    j('Salvador',  'Lues',            28, 'Pilar Izq',    1,  0.91),
-    j('Tomás',     'Dussaillant',     26, 'Hooker',       2,  0.90),
-    j('Martín',    'Sigren',          27, 'Pilar Der',    3,  0.91),
-    j('Pablo',     'Garafulic',       29, 'Segunda Línea',4,  0.91),
-    j('Cristóbal', 'Arredondo',       25, 'Segunda Línea',5,  0.90),
-    j('Rodrigo',   'Onetto',          26, 'Ala',          7,  0.91),
-    j('Santiago',  'Videla',          28, 'Octavo',       8,  0.91),
-    j('Marcelo',   'Torrealba',       27, 'Medio Scrum',  9,  0.90),
-    j('Rodrigo',   'Fernández',       26, 'Apertura',     10, 0.92),
-    j('Nicolás',   'Garafulic',       24, 'Wing',         11, 0.90),
-    j('Matías',    'Garafulic',       26, 'Centro',       12, 0.91),
-    j('Cristóbal', 'Fierro',          26, 'Centro',       13, 0.90),
-    j('Sebastián', 'Cancelliere',     28, 'Wing',         14, 0.89),
-    j('Luca',      'Strabucchi',      25, 'Fullback',     15, 0.91),
-    j('Francisco', 'Urroz',           23, 'Ala',          6,  0.87),
-    j('Matías',    'Dittborn',        24, 'Hooker',       2,  0.86),
-    j('Pablo',     'Lemoine',         26, 'Pilar Der',    3,  0.86),
-    j('Rodrigo',   'Cabello',         23, 'Medio Scrum',  9,  0.85),
-    j('Francisco', 'Zambrano',        22, 'Wing',         11, 0.84),
-    j('Benjamín',  'Videla',          24, 'Apertura',     10, 0.85),
-    j('Raimundo',  'Hernández',       23, 'Centro',       12, 0.84),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Salvador',   'Lues',               28, 'Pilar Izq',    80, 54, 70, 40, 46, 40, 46, 80, 66, 60),
+    p('Tomás',      'Dussaillant',        26, 'Hooker',       72, 80, 66, 48, 52, 46, 52, 70, 70, 62),
+    p('Iñaki',      'Gurruchaga',         27, 'Pilar Der',    80, 56, 70, 40, 46, 40, 46, 80, 66, 58),
+    p('Clemente',   'Saavedra',           26, 'Segunda Línea',60, 82, 70, 50, 48, 46, 52, 80, 78, 80),
+    p('Javier',     'Eissmann',           28, 'Segunda Línea',58, 80, 68, 48, 46, 44, 50, 78, 76, 66),
+    p('Andrés',     'Kuzmanic',           26, 'Ala',          52, 62, 80, 64, 54, 48, 58, 70, 80, 62),
+    p('Raimundo',   'Martínez',           25, 'Ala',          50, 60, 78, 62, 52, 46, 56, 68, 78, 60),
+    p('Alfonso',    'Escobar',            27, 'Octavo',       56, 62, 78, 62, 58, 48, 58, 72, 76, 66),
+    p('Marcelo',    'Torrealba',          27, 'Medio Scrum',  36, 34, 56, 78, 82, 60, 78, 50, 66, 70),
+    p('Rodrigo',    'Fernández',          26, 'Apertura',     36, 36, 56, 70, 82, 82, 82, 52, 62, 74),
+    p('Iñaki',      'Delguy',             24, 'Wing',         32, 32, 62, 90, 56, 62, 66, 58, 64, 54),
+    p('Matías',     'Garafulic',          26, 'Centro',       38, 36, 72, 72, 68, 58, 68, 68, 66, 64),
+    p('Nicolás',    'Roger',              25, 'Centro',       36, 34, 68, 70, 64, 54, 62, 64, 62, 56),
+    p('Cristóbal',  'Game',               24, 'Wing',         30, 30, 60, 84, 54, 58, 62, 54, 62, 50),
+    p('Franco',     'Velarde',            24, 'Fullback',     32, 32, 62, 78, 62, 74, 72, 54, 62, 60),
+    p('Esteban',    'Inostroza',          27, 'Pilar Izq',    74, 50, 64, 38, 42, 38, 42, 74, 60, 52),
+    p('Diego',      'Escobar',            25, 'Hooker',       64, 70, 60, 44, 46, 42, 46, 60, 62, 50),
+    p('Santiago',   'Pedrero',            26, 'Segunda Línea',54, 72, 64, 44, 42, 40, 46, 70, 68, 58),
+    p('Augusto',    'Sarmiento',          25, 'Segunda Línea',52, 70, 62, 42, 40, 38, 44, 68, 66, 54),
+    p('Federico',   'Albrisi',            24, 'Ala',          46, 54, 72, 58, 46, 42, 48, 62, 70, 50),
+    p('Rafael',     'Iriarte',            25, 'Medio Scrum',  32, 30, 50, 72, 72, 54, 68, 44, 60, 56),
+    p('José Ignacio','Larenas',           23, 'Wing',         28, 28, 54, 80, 50, 52, 56, 50, 58, 44),
   ],
 
-  // ── COBRAS BRASIL RUGBY (São Paulo / Jacareí, Brasil) ─────────────────────
+  // ── COBRAS BRASIL RUGBY 2025 (Jacareí, Brasil) ────────────────────────────
   'Cobras': [
-    j('Lorenzo',   'Massari',         28, 'Centro',       12, 0.90),
-    j('Rosko',     'Specman',         30, 'Wing',         11, 0.90),
-    j('Zinedine',  'Booysen',         27, 'Medio Scrum',  9,  0.90),
-    j('Rodrigo',   'Silva',           27, 'Pilar Izq',    1,  0.89),
-    j('Gabriel',   'Nóbrega',         26, 'Hooker',       2,  0.88),
-    j('Felipe',    'Sancery',         28, 'Pilar Der',    3,  0.89),
-    j('Cléber',    'Dias',            27, 'Segunda Línea',4,  0.88),
-    j('Helder',    'Lúcio',           25, 'Segunda Línea',5,  0.87),
-    j('Tomás',     'Alemán',          24, 'Ala',          6,  0.88),
-    j('João',      'Moutinho',        25, 'Ala',          7,  0.87),
-    j('Guilherme', 'Augusto',         29, 'Octavo',       8,  0.89),
-    j('Pedro',     'Heluy',           26, 'Medio Scrum',  9,  0.88),
-    j('Lucas',     'Duque',           27, 'Apertura',     10, 0.89),
-    j('Marcos',    'Vidal',           26, 'Centro',       13, 0.87),
-    j('Felipe',    'Corrêa',          28, 'Fullback',     15, 0.89),
-    j('Hugo',      'Rocha',           25, 'Wing',         14, 0.86),
-    j('Cauã',      'Dos Santos',      24, 'Ala',          7,  0.85),
-    j('Rafael',    'Soaresinho',      23, 'Hooker',       2,  0.84),
-    j('Vítor',     'Laborne',         25, 'Medio Scrum',  9,  0.84),
-    j('Lucas',     'Mota',            22, 'Wing',         11, 0.83),
-    j('Pedro',     'Saraiva',         24, 'Segunda Línea',5,  0.83),
-    j('João',      'Pedro Galvão',    23, 'Pilar Izq',    1,  0.82),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Manuel',     'Todaro',             27, 'Pilar Izq',    78, 52, 68, 40, 44, 40, 44, 76, 64, 56),
+    p('Cléber',     'Dias',               30, 'Hooker',       72, 76, 66, 46, 50, 44, 50, 68, 68, 72),
+    p('Aoturoa',    'Seeling',            28, 'Pilar Der',    80, 56, 70, 40, 46, 40, 46, 80, 66, 58),
+    p('Pedro',      'Saraiva',            26, 'Segunda Línea',54, 72, 64, 44, 42, 40, 46, 70, 68, 56),
+    p('Helder',     'Lúcio',              25, 'Segunda Línea',52, 70, 62, 42, 40, 38, 44, 68, 66, 52),
+    p('Moisés',     'Duque',              32, 'Ala',          52, 60, 80, 62, 52, 46, 54, 68, 78, 70),
+    p('Javier',     'Coronel',            23, 'Ala',          50, 58, 76, 60, 48, 44, 50, 66, 74, 54),
+    p('Guilherme',  'Augusto',            29, 'Octavo',       54, 60, 78, 62, 58, 48, 58, 72, 76, 64),
+    p('Rodrigo',    'Santos',             27, 'Medio Scrum',  34, 32, 54, 76, 78, 58, 74, 48, 64, 62),
+    p('Augusto',    'Guillamondegui',     26, 'Apertura',     34, 34, 54, 68, 78, 78, 78, 48, 58, 66),
+    p('Rosko',      'Specman',            30, 'Wing',         32, 32, 62, 92, 58, 62, 68, 60, 64, 54),
+    p('Lorenzo',    'Massari',            28, 'Centro',       38, 36, 70, 72, 68, 56, 66, 66, 64, 60),
+    p('Fernando',   'Luna',               26, 'Centro',       36, 34, 68, 70, 64, 54, 62, 62, 62, 56),
+    p('Robert',     'Tenório',            25, 'Wing',         28, 28, 58, 84, 52, 56, 60, 52, 60, 46),
+    p('Felipe',     'Corrêa',             28, 'Fullback',     30, 30, 60, 76, 60, 72, 70, 52, 60, 58),
+    p('Gabriel',    'Nóbrega',            26, 'Pilar Izq',    70, 48, 60, 36, 40, 36, 38, 68, 56, 46),
+    p('João',       'Amaral',             25, 'Hooker',       62, 66, 58, 42, 44, 40, 44, 58, 58, 48),
+    p('Cléber',     'Cordeiro',           27, 'Segunda Línea',48, 64, 58, 40, 38, 36, 42, 64, 62, 48),
+    p('Lucas',      'Tranquez',           24, 'Ala',          44, 52, 70, 58, 44, 40, 46, 60, 68, 48),
+    p('Victor',     'Silva',              24, 'Wing',         26, 26, 52, 82, 48, 50, 52, 48, 54, 42),
+    p('Daniel',     'Lima',               25, 'Centro',       32, 30, 60, 64, 54, 44, 52, 54, 54, 46),
+    p('Widson',     'Menezes',            24, 'Fullback',     28, 28, 56, 74, 54, 66, 62, 48, 56, 48),
   ],
 
-  // ── YACARÉ XV (Asunción, Paraguay) ───────────────────────────────────────
+  // ── YACARÉ XV 2026 (Asunción, Paraguay) ───────────────────────────────────
   'Yacaré XV': [
-    j('Ramiro',    'Amarilla',        28, 'Medio Scrum',  9,  0.91),
-    j('Rodrigo',   'Fernández Criado',29, 'Pilar Izq',   1,  0.89),
-    j('Santiago',  'Medina',          28, 'Hooker',       2,  0.88),
-    j('Iván',      'Zerbino',         27, 'Pilar Der',    3,  0.89),
-    j('Facundo',   'Paiva',           26, 'Segunda Línea',4,  0.88),
-    j('Estefano',  'Aranda',          24, 'Segunda Línea',5,  0.87),
-    j('Camilo',    'Blasco',          25, 'Ala',          6,  0.88),
-    j('Jordi',     'Chávez',          24, 'Ala',          7,  0.87),
-    j('Hernán',    'Senatore',        29, 'Octavo',       8,  0.89),
-    j('Joaquín',   'Mussi',           23, 'Apertura',     10, 0.88),
-    j('Agustín',   'Palavecino',      24, 'Wing',         11, 0.87),
-    j('Gonzalo',   'Iglesias',        27, 'Centro',       12, 0.88),
-    j('Ignacio',   'Callegari',       26, 'Centro',       13, 0.87),
-    j('Joaquín',   'Díaz Bonilla',    26, 'Wing',         14, 0.88),
-    j('Juan Bautista','Pedemonte',    24, 'Fullback',     15, 0.88),
-    j('Marcos',    'Violi',           30, 'Medio Scrum',  9,  0.85),
-    j('Ezequiel',  'Rins',            28, 'Pilar Izq',    1,  0.84),
-    j('Nahuel',    'Chaparro',        24, 'Hooker',       2,  0.83),
-    j('Lucas',     'Garaizabal',      23, 'Ala',          6,  0.83),
-    j('Sebastián', 'Vidal',           22, 'Wing',         11, 0.82),
-    j('Matías',    'Díaz',            24, 'Centro',       12, 0.83),
-    j('Franco',    'Cucchiaroni',     23, 'Segunda Línea',4,  0.82),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Lautaro',    'González',           27, 'Pilar Izq',    76, 50, 66, 38, 42, 38, 42, 74, 62, 54),
+    p('Santiago',   'Medina',             26, 'Hooker',       68, 74, 62, 44, 48, 42, 48, 64, 64, 54),
+    p('Iván',       'Zerbino',            25, 'Pilar Der',    76, 52, 66, 38, 42, 38, 42, 74, 62, 52),
+    p('Facundo',    'Paiva',              25, 'Segunda Línea',56, 74, 64, 44, 42, 40, 46, 72, 70, 58),
+    p('Estefano',   'Aranda',             24, 'Segunda Línea',54, 72, 62, 42, 40, 38, 44, 70, 68, 54),
+    p('Camilo',     'Blasco',             24, 'Ala',          48, 56, 74, 60, 48, 44, 50, 64, 72, 54),
+    p('Jordi',      'Chávez',             23, 'Ala',          46, 54, 72, 58, 46, 42, 48, 62, 70, 50),
+    p('Joaquín',    'Domínguez',          27, 'Octavo',       54, 58, 76, 60, 56, 46, 54, 70, 74, 64),
+    p('Ramiro',     'Amarilla',           26, 'Medio Scrum',  34, 32, 52, 76, 78, 58, 74, 46, 62, 66),
+    p('Joaquín',    'Lamas',              25, 'Apertura',     32, 32, 50, 66, 74, 74, 74, 46, 56, 64),
+    p('Agustín',    'Palavecino',         23, 'Wing',         28, 28, 54, 80, 50, 52, 56, 50, 56, 44),
+    p('Gonzalo',    'Iglesias',           26, 'Centro',       36, 34, 66, 66, 60, 50, 58, 62, 60, 56),
+    p('Valentino',  'Dicapua',            22, 'Centro',       34, 32, 62, 68, 58, 48, 56, 58, 58, 50),
+    p('Felipe',     'Puertas',            24, 'Wing',         28, 28, 54, 78, 48, 50, 54, 48, 54, 42),
+    p('Axel',       'Zapata',             23, 'Fullback',     28, 28, 56, 72, 54, 64, 62, 48, 54, 50),
+    p('Rodrigo',    'Fernández Criado',   28, 'Pilar Izq',    72, 48, 60, 36, 40, 36, 40, 70, 58, 48),
+    p('Nahuel',     'Chaparro',           24, 'Hooker',       60, 66, 56, 40, 42, 38, 42, 56, 56, 46),
+    p('Franco',     'Cucchiaroni',        23, 'Segunda Línea',48, 62, 56, 38, 36, 34, 40, 62, 60, 44),
+    p('Lucas',      'Garaizabal',         23, 'Ala',          40, 50, 66, 54, 42, 38, 44, 56, 64, 44),
+    p('Marcos',     'Violi',              29, 'Medio Scrum',  30, 28, 48, 68, 68, 50, 62, 40, 56, 54),
+    p('Joaquín',    'Mussi',              23, 'Apertura',     30, 30, 48, 62, 68, 68, 66, 42, 52, 56),
+    p('Sebastián',  'Vidal',              22, 'Wing',         24, 24, 48, 74, 44, 46, 48, 44, 48, 38),
   ],
 
-  // ── TARUCAS (San Miguel de Tucumán, Argentina) — desde 2024 ───────────────
+  // ── TARUCAS 2026 (San Miguel de Tucumán, Argentina) ───────────────────────
   'Tarucas': [
-    j('Matías',    'Orlando',         28, 'Centro',       12, 0.94),
-    j('Diego',     'Fortuny',         29, 'Fullback',     15, 0.93),
-    j('Tomás',     'Elizalde',        25, 'Wing',         11, 0.92),
-    j('Bruno',     'Postiglioni',     27, 'Pilar Izq',    1,  0.91),
-    j('Agustín',   'Capurro',         26, 'Hooker',       2,  0.90),
-    j('Rodrigo',   'Báez',            28, 'Pilar Der',    3,  0.91),
-    j('Ignacio',   'Larrañaga',       25, 'Segunda Línea',4,  0.90),
-    j('Federico',  'Wegrzyn',         27, 'Segunda Línea',5,  0.89),
-    j('Santiago',  'Álvarez',         24, 'Ala',          6,  0.90),
-    j('Joaquín',   'Moro',            26, 'Ala',          7,  0.89),
-    j('Ignacio',   'Pedraza',         28, 'Octavo',       8,  0.91),
-    j('Lucas',     'Vidoret',         24, 'Medio Scrum',  9,  0.90),
-    j('Rodrigo',   'Isgró',           25, 'Apertura',     10, 0.91),
-    j('Gonzalo',   'Nocera',          26, 'Wing',         14, 0.89),
-    j('Lisandro',  'Castellano',      28, 'Centro',       13, 0.89),
-    j('Franco',    'Molina',          23, 'Wing',         11, 0.87),
-    j('Lautaro',   'García',          24, 'Medio Scrum',  9,  0.86),
-    j('Facundo',   'Villanueva',      23, 'Apertura',     10, 0.86),
-    j('Santiago',  'Lareu',           22, 'Ala',          7,  0.85),
-    j('Bruno',     'Acuña',           24, 'Hooker',       2,  0.85),
-    j('Martín',    'Bustos',          25, 'Pilar Izq',    1,  0.84),
-    j('Lisandro',  'Arbor',           23, 'Segunda Línea',5,  0.84),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Bautista',   'Estofán',            25, 'Pilar Izq',    78, 52, 68, 40, 44, 40, 44, 76, 64, 56),
+    p('Joaquín',    'Poliche',            26, 'Hooker',       70, 76, 64, 46, 50, 44, 50, 66, 66, 56),
+    p('Miguel',     'Mukdise',            27, 'Pilar Der',    78, 54, 68, 40, 44, 40, 44, 76, 64, 56),
+    p('Ignacio',    'Marquieguez',        25, 'Segunda Línea',56, 76, 64, 44, 42, 40, 46, 72, 70, 58),
+    p('Luciano',    'Asevedo',            26, 'Segunda Línea',54, 74, 62, 42, 40, 38, 44, 70, 68, 56),
+    p('Mateo',      'Pasquini',           24, 'Ala',          50, 58, 78, 62, 50, 46, 52, 66, 76, 58),
+    p('Santiago',   'Saleme',             25, 'Ala',          48, 56, 76, 60, 48, 44, 50, 64, 74, 56),
+    p('Facundo',    'García Hamilton',    26, 'Octavo',       56, 60, 78, 62, 58, 48, 58, 72, 76, 66),
+    p('Rafael',     'O\'Gorman',          24, 'Medio Scrum',  34, 32, 52, 76, 78, 58, 74, 46, 64, 60),
+    p('Simón',      'Pfister',            24, 'Apertura',     34, 34, 52, 68, 76, 76, 76, 48, 58, 64),
+    p('Tomás',      'Elizalde',           25, 'Wing',         30, 30, 60, 86, 56, 60, 64, 56, 62, 52),
+    p('Matías',     'Orlando',            29, 'Centro',       44, 42, 78, 78, 74, 64, 74, 74, 72, 80),
+    p('Ignacio',    'Cerrutti',           25, 'Centro',       38, 36, 70, 72, 66, 56, 64, 64, 64, 58),
+    p('Gonzalo',    'Nocera',             26, 'Wing',         28, 28, 58, 82, 52, 54, 58, 50, 58, 46),
+    p('Máximo',     'Ledesma',            23, 'Fullback',     32, 32, 60, 78, 62, 72, 70, 52, 60, 58),
+    p('José',       'Calderoni',          26, 'Pilar Izq',    72, 48, 60, 36, 40, 36, 40, 70, 58, 48),
+    p('Raúl',       'Guraib',             27, 'Hooker',       64, 70, 58, 42, 44, 40, 44, 60, 60, 48),
+    p('Juan Manuel','Vivas',              25, 'Segunda Línea',50, 66, 58, 40, 38, 36, 42, 64, 62, 48),
+    p('Lautaro',    'García',             23, 'Ala',          42, 50, 66, 54, 42, 38, 44, 56, 64, 46),
+    p('Franco',     'Molina',             23, 'Octavo',       48, 52, 70, 56, 50, 42, 50, 62, 68, 52),
+    p('Ignacio',    'Cavallín',           22, 'Medio Scrum',  28, 26, 44, 68, 66, 48, 60, 38, 54, 48),
+    p('Facundo',    'Villanueva',         23, 'Apertura',     28, 28, 46, 60, 66, 66, 64, 40, 50, 52),
   ],
 
-  // ── CAPIBARAS XV (Rosario, Argentina) — desde 2025 ────────────────────────
+  // ── CAPIBARAS XV 2026 (Rosario, Argentina) — primer año ───────────────────
   'Capibaras XV': [
-    j('Emiliano',  'Boffelli',        28, 'Fullback',     15, 0.95),
-    j('Manuel',    'Bernstein',       26, 'Ala',          7,  0.91),
-    j('Ignacio',   'Gandini',         27, 'Ala',          6,  0.91),
-    j('Pablo',     'Gatti',           26, 'Pilar Izq',    1,  0.88),
-    j('Gonzalo',   'Gutiérrez',       26, 'Hooker',       2,  0.87),
-    j('Santiago',  'Villavicencio',   27, 'Pilar Der',    3,  0.88),
-    j('Rodrigo',   'Ponce',           25, 'Segunda Línea',4,  0.87),
-    j('Pablo',     'Grille',          26, 'Segunda Línea',5,  0.86),
-    j('Marcos',    'Moreira',         24, 'Octavo',       8,  0.87),
-    j('Felipe',    'Ezcurra',         26, 'Medio Scrum',  9,  0.88),
-    j('Bautista',  'Silvestre',       24, 'Apertura',     10, 0.87),
-    j('Nicolás',   'Polvora',         25, 'Wing',         11, 0.86),
-    j('Martín',    'Cancelliere',     27, 'Centro',       12, 0.87),
-    j('Lucas',     'Doura',           26, 'Centro',       13, 0.86),
-    j('Rodrigo',   'Bonino',          25, 'Wing',         14, 0.86),
-    j('Juan Cruz', 'Orlando',         23, 'Medio Scrum',  9,  0.84),
-    j('Tomás',     'Villanueva',      24, 'Apertura',     10, 0.84),
-    j('Sebastián', 'Blas',            23, 'Wing',         11, 0.83),
-    j('Facundo',   'Peralta',         24, 'Ala',          7,  0.83),
-    j('Gonzalo',   'Correa',          23, 'Pilar Der',    3,  0.82),
-    j('Diego',     'Cuña',            22, 'Hooker',       2,  0.81),
-    j('Agustín',   'Manzotti',        23, 'Segunda Línea',5,  0.81),
+    //                                              sc  li  ta  ve  pa  pi  vi  po  mo  ld
+    p('Enzo',       'Avaca',              27, 'Pilar Izq',    80, 54, 70, 40, 46, 40, 46, 80, 66, 60),
+    p('Ignacio',    'Dogliani',           26, 'Hooker',       70, 76, 64, 44, 48, 42, 48, 66, 66, 56),
+    p('Lucas',      'Bür',                27, 'Pilar Der',    78, 52, 68, 40, 44, 40, 44, 76, 64, 54),
+    p('Manuel',     'Bernstein',          26, 'Segunda Línea',54, 74, 66, 46, 44, 42, 48, 72, 72, 60),
+    p('Ignacio',    'Gandini',            27, 'Segunda Línea',52, 72, 64, 44, 42, 40, 46, 70, 70, 56),
+    p('Lorenzo',    'Colidio',            24, 'Ala',          50, 60, 78, 66, 52, 46, 54, 68, 78, 58),
+    p('Felipe',     'Villagrán',          25, 'Ala',          48, 58, 76, 64, 50, 44, 52, 66, 76, 56),
+    p('Bruno',      'Heit',               26, 'Octavo',       56, 60, 78, 62, 58, 48, 58, 72, 76, 66),
+    p('Juan',       'Lovell',             25, 'Medio Scrum',  34, 32, 54, 76, 78, 60, 74, 46, 64, 62),
+    p('Juan',       'Baronio',            24, 'Apertura',     34, 34, 52, 68, 74, 74, 72, 46, 56, 62),
+    p('Franco',     'Rossetto',           23, 'Wing',         28, 28, 58, 84, 52, 56, 60, 52, 60, 48),
+    p('Jerónimo',   'Gómez Vara',         26, 'Centro',       38, 36, 70, 70, 64, 54, 62, 64, 64, 58),
+    p('Gino',       'Dicapua',            25, 'Centro',       36, 34, 66, 68, 60, 50, 58, 60, 60, 54),
+    p('Lautaro',    'Cipriani',           24, 'Wing',         28, 28, 56, 82, 50, 54, 56, 50, 58, 46),
+    p('Martín',     'Vaca',               27, 'Fullback',     32, 32, 62, 78, 62, 72, 70, 54, 62, 60),
+    p('Diego',      'Correa',             28, 'Pilar Izq',    76, 50, 66, 38, 42, 38, 42, 74, 62, 52),
+    p('Martiniano', 'Aime',               21, 'Hooker',       58, 62, 52, 38, 40, 36, 40, 54, 54, 42),
+    p('Basilio',    'Cañas',              20, 'Segunda Línea',44, 60, 52, 36, 34, 32, 38, 58, 56, 40),
+    p('Pietro',     'Croce',              20, 'Ala',          38, 46, 60, 52, 38, 34, 40, 50, 58, 38),
+    p('Franco',     'Marizza',            21, 'Ala',          36, 44, 58, 54, 36, 32, 38, 48, 56, 36),
+    p('Benjamín',   'Ordiz',              20, 'Medio Scrum',  24, 22, 38, 60, 58, 42, 54, 32, 46, 42),
+    p('Mateo',      'Tanoni',             21, 'Wing',         22, 22, 44, 68, 40, 42, 44, 38, 46, 34),
   ],
 };
 
@@ -276,88 +256,15 @@ async function main() {
   await prisma.temporada.deleteMany();
   await prisma.club.deleteMany();
 
-  // Datos reales: colores, estadios y ciudades oficiales
   const clubsData = [
-    {
-      nombre: 'Pampas',
-      ciudad: 'San Isidro',
-      provincia: 'Argentina',
-      estadio: 'Estadio del CASI',
-      presupuesto: 3500000,
-      reputacion: 98,
-      color1: '#75AADB',  // celeste claro
-      color2: '#FFFFFF',
-    },
-    {
-      nombre: 'Dogos XV',
-      ciudad: 'Córdoba',
-      provincia: 'Argentina',
-      estadio: 'Córdoba Athletic Club',
-      presupuesto: 3200000,
-      reputacion: 96,
-      color1: '#1A1A1A',  // negro
-      color2: '#1B75BC',  // azul
-    },
-    {
-      nombre: 'Peñarol Rugby',
-      ciudad: 'Montevideo',
-      provincia: 'Uruguay',
-      estadio: 'Estadio Charrúa',
-      presupuesto: 3000000,
-      reputacion: 95,
-      color1: '#1A1A1A',  // negro
-      color2: '#FFD700',  // dorado
-    },
-    {
-      nombre: 'Selknam',
-      ciudad: 'Santiago',
-      provincia: 'Chile',
-      estadio: 'CARR La Reina',
-      presupuesto: 2800000,
-      reputacion: 88,
-      color1: '#1A1A1A',  // negro
-      color2: '#C8102E',  // rojo
-    },
-    {
-      nombre: 'Tarucas',
-      ciudad: 'San Miguel de Tucumán',
-      provincia: 'Argentina',
-      estadio: 'Estadio Héctor Cabrera',
-      presupuesto: 2600000,
-      reputacion: 86,
-      color1: '#FF6B00',  // naranja
-      color2: '#1A1A1A',  // negro
-    },
-    {
-      nombre: 'Cobras',
-      ciudad: 'Jacareí',
-      provincia: 'Brasil',
-      estadio: 'Estádio Nicolau Alayon',
-      presupuesto: 2500000,
-      reputacion: 84,
-      color1: '#E8A200',  // dorado
-      color2: '#7B1C3A',  // guinda
-    },
-    {
-      nombre: 'Yacaré XV',
-      ciudad: 'Asunción',
-      provincia: 'Paraguay',
-      estadio: 'Estadio Héroes de Curupayty',
-      presupuesto: 2200000,
-      reputacion: 80,
-      color1: '#D52B1E',  // rojo paraguayo
-      color2: '#FFFFFF',
-    },
-    {
-      nombre: 'Capibaras XV',
-      ciudad: 'Rosario',
-      provincia: 'Argentina',
-      estadio: 'Jockey Club de Rosario',
-      presupuesto: 2000000,
-      reputacion: 76,
-      color1: '#CC0000',  // rojo
-      color2: '#FFFFFF',
-    },
+    { nombre: 'Pampas',       ciudad: 'San Isidro',            provincia: 'Argentina', estadio: 'Estadio del CASI',              presupuesto: 3500000, reputacion: 98, color1: '#75AADB', color2: '#FFFFFF' },
+    { nombre: 'Dogos XV',     ciudad: 'Córdoba',               provincia: 'Argentina', estadio: 'Córdoba Athletic Club',          presupuesto: 3200000, reputacion: 96, color1: '#1A1A1A', color2: '#1B75BC' },
+    { nombre: 'Peñarol Rugby',ciudad: 'Montevideo',            provincia: 'Uruguay',   estadio: 'Estadio Charrúa',               presupuesto: 3000000, reputacion: 95, color1: '#1A1A1A', color2: '#FFD700' },
+    { nombre: 'Selknam',      ciudad: 'Santiago',              provincia: 'Chile',     estadio: 'CARR La Reina',                 presupuesto: 2800000, reputacion: 88, color1: '#1A1A1A', color2: '#C8102E' },
+    { nombre: 'Tarucas',      ciudad: 'San Miguel de Tucumán', provincia: 'Argentina', estadio: 'Estadio Héctor Cabrera',        presupuesto: 2600000, reputacion: 86, color1: '#FF6B00', color2: '#1A1A1A' },
+    { nombre: 'Cobras',       ciudad: 'Jacareí',               provincia: 'Brasil',    estadio: 'Estádio Nicolau Alayon',        presupuesto: 2500000, reputacion: 84, color1: '#E8A200', color2: '#7B1C3A' },
+    { nombre: 'Yacaré XV',    ciudad: 'Asunción',              provincia: 'Paraguay',  estadio: 'Estadio Héroes de Curupayty',   presupuesto: 2200000, reputacion: 80, color1: '#D52B1E', color2: '#FFFFFF' },
+    { nombre: 'Capibaras XV', ciudad: 'Rosario',               provincia: 'Argentina', estadio: 'Jockey Club de Rosario',        presupuesto: 2000000, reputacion: 76, color1: '#CC0000', color2: '#FFFFFF' },
   ];
 
   console.log('📍 Creando clubes...');
@@ -365,16 +272,19 @@ async function main() {
   for (const data of clubsData) {
     const club = await prisma.club.create({ data });
     clubs.push(club);
-    console.log(`  ✓ ${club.nombre} (${club.ciudad}, ${club.provincia})`);
+    console.log(`  ✓ ${club.nombre}`);
   }
 
   console.log('👤 Creando jugadores...');
   for (const club of clubs) {
     const plantel = planteles[club.nombre];
+    if (!plantel) { console.warn(`  ⚠ Sin plantel para ${club.nombre}`); continue; }
     for (const jug of plantel) {
       await prisma.jugador.create({ data: { ...jug, clubId: club.id } });
     }
-    console.log(`  ✓ ${club.nombre}: ${plantel.length} jugadores`);
+    const ovrs = plantel.map(j => Math.round((j.scrum+j.lineout+j.tackle+j.velocidad+j.pase+j.pie+j.vision+j.potencia+j.motor+j.liderazgo)/10));
+    const ovrProm = Math.round(ovrs.reduce((a,b)=>a+b,0)/ovrs.length);
+    console.log(`  ✓ ${club.nombre}: ${plantel.length} jugadores · OVR promedio ${ovrProm}`);
   }
 
   console.log('📅 Creando temporada y fixture...');
@@ -384,18 +294,16 @@ async function main() {
 
   const ids = clubs.map(c => c.id);
   const fixture = generarFixture(ids);
-
   for (let r = 0; r < fixture.length; r++) {
     for (const [localId, visitanteId] of fixture[r]) {
       await prisma.partido.create({
         data: { temporadaId: temporada.id, clubLocalId: localId, clubVisitanteId: visitanteId, jornada: r + 1 },
       });
     }
-    console.log(`  ✓ Jornada ${r + 1}: ${fixture[r].length} partidos`);
   }
+  console.log(`  ✓ ${fixture.length} jornadas generadas`);
 
-  console.log('\n✅ Seed completado!');
-  console.log(`   ${clubs.length} equipos · ${clubs.length * 22} jugadores · ${fixture.length} jornadas`);
+  console.log('\n✅ Seed completado — 8 equipos · 176 jugadores reales de la SRA');
 }
 
 main()
