@@ -43,3 +43,5 @@ export const iniciarCopa = () => api.post('/temporada/copa/iniciar').then(r => r
 export const crearFinal = () => api.post('/temporada/copa/crear-final').then(r => r.data);
 
 export const getFixtureCompleto = () => api.get('/temporada/jornadas').then(r => r.data);
+
+export const getJugadorStats = (id) => api.get(`/estadisticas/jugador/${id}`).then(r => r.data);

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { getJornadas, getJornada, simularJornada, simularPartido, finalizarTemporada, getCopa, iniciarCopa, crearFinal } from '../api/client.js';
+import { getJornadas, getJornada, simularJornada, simularPartido, finalizarTemporada, getCopa, iniciarCopa, crearFinal, getJugadores } from '../api/client.js';
 import { ClubShield } from '../components/Layout.jsx';
 
 const TIPO_ICON  = { try: '🏉', penal: '🎯', drop: '🦵' };
@@ -234,25 +234,152 @@ function NuevaTemporadaScreen({ data, onClose }) {
   );
 }
 
+// ─── Pre-match modal ──────────────────────────────────────────────────────────
+const ATTRS = ['scrum','lineout','tackle','velocidad','pase','pie','vision','potencia','motor','liderazgo'];
+const calcOvr = jugadores => jugadores.length
+  ? Math.round(jugadores.reduce((s, j) => s + ATTRS.reduce((a, k) => a + j[k], 0) / ATTRS.length, 0) / jugadores.length)
+  : 0;
+
+function PreMatchModal({ partido, clubId, onSimular, onClose, simLoading }) {
+  const [localJug, setLocalJug]   = useState([]);
+  const [visitJug, setVisitJug]   = useState([]);
+  const [cargando, setCargando]   = useState(true);
+
+  const local     = partido.clubLocal;
+  const visitante = partido.clubVisitante;
+  const esLocal   = partido.clubLocalId === clubId;
+
+  useEffect(() => {
+    Promise.all([getJugadores(local.id), getJugadores(visitante.id)])
+      .then(([lj, vj]) => { setLocalJug(lj); setVisitJug(vj); })
+      .finally(() => setCargando(false));
+  }, []);
+
+  const ovrL = calcOvr(localJug);
+  const ovrV = calcOvr(visitJug);
+  const total = ovrL + ovrV || 1;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ background: '#0D0D14', border: '1px solid #1E1E32' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="px-5 py-5"
+          style={{
+            background: `linear-gradient(105deg, ${local.color1}20 0%, #0D0D14 45%, ${visitante.color1}20 100%)`,
+            borderBottom: '1px solid #1E1E32',
+          }}
+        >
+          <p className="text-center text-[10px] uppercase tracking-[0.3em] text-gray-700 mb-4">Pre-partido</p>
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <ClubShield club={local} size={56} />
+              <p className="text-white font-bold text-xs uppercase text-center leading-tight">{local.nombre}</p>
+              {esLocal && (
+                <span className="text-[9px] px-2 py-0.5 rounded-full font-black" style={{ background: '#E8172C', color: '#fff' }}>
+                  Tu equipo
+                </span>
+              )}
+            </div>
+            <span className="font-black text-2xl flex-shrink-0" style={{ color: '#E8172C' }}>VS</span>
+            <div className="flex flex-col items-center gap-2 flex-1">
+              <ClubShield club={visitante} size={56} />
+              <p className="text-white font-bold text-xs uppercase text-center leading-tight">{visitante.nombre}</p>
+              {!esLocal && (
+                <span className="text-[9px] px-2 py-0.5 rounded-full font-black" style={{ background: '#E8172C', color: '#fff' }}>
+                  Tu equipo
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="p-5 space-y-4">
+          {cargando ? (
+            <p className="text-gray-700 text-xs text-center animate-pulse uppercase tracking-[0.2em]">Analizando equipos...</p>
+          ) : (
+            <>
+              <div>
+                <p className="section-title mb-2">Promedio OVR del plantel</p>
+                <div className="flex items-center gap-3">
+                  <span className="font-black text-2xl w-10 text-center" style={{ color: local.color1 }}>{ovrL}</span>
+                  <div className="flex-1 rounded-full h-2 overflow-hidden" style={{ background: '#1E1E32' }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${Math.round((ovrL / total) * 100)}%`, background: local.color1 }}
+                    />
+                  </div>
+                  <div className="flex-1 rounded-full h-2 overflow-hidden" style={{ background: '#1E1E32', transform: 'scaleX(-1)' }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${Math.round((ovrV / total) * 100)}%`, background: visitante.color1 }}
+                    />
+                  </div>
+                  <span className="font-black text-2xl w-10 text-center" style={{ color: visitante.color1 }}>{ovrV}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-xl py-2.5" style={{ background: '#12121F', border: '1px solid #1E1E32' }}>
+                  <p className="text-white font-black">{localJug.length}</p>
+                  <p className="text-gray-600 text-[10px]">jugadores</p>
+                </div>
+                <div className="rounded-xl py-2.5" style={{ background: '#12121F', border: '1px solid #1E1E32' }}>
+                  <p className="text-white font-black">{visitJug.length}</p>
+                  <p className="text-gray-600 text-[10px]">jugadores</p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Acciones */}
+        <div className="px-5 pb-5 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-gray-500 text-sm font-medium transition-colors hover:text-white"
+            style={{ background: '#12121F' }}
+          >
+            Volver
+          </button>
+          <button
+            onClick={() => { onSimular(partido.id); onClose(); }}
+            disabled={simLoading}
+            className="py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider disabled:opacity-50 transition-opacity hover:opacity-90"
+            style={{ background: '#E8172C', flex: 2 }}
+          >
+            {simLoading ? 'Simulando...' : '▶ Simular'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Partido card ──────────────────────────────────────────────────────────────
-function PartidoCard({ partido, onSimular, loading, clubId }) {
+function PartidoCard({ partido, onSimular, loading, clubId, onPreview }) {
   const local     = partido.clubLocal;
   const visitante = partido.clubVisitante;
   const esNuestro = partido.clubLocalId === clubId || partido.clubVisitanteId === clubId;
 
   return (
     <div
-      className="rounded-xl p-4 transition-all"
+      className="rounded-xl p-4 transition-all cursor-pointer"
       style={{
         background: esNuestro ? `${local.color1}0A` : '#12121F',
         border: `1px solid ${esNuestro ? local.color1 + '30' : '#1E1E32'}`,
       }}
+      onClick={() => !partido.jugado && onPreview && onPreview(partido)}
     >
       <div className="flex items-center gap-3">
         {/* Local */}
         <div className="flex flex-col items-center gap-1.5 flex-1">
           <ClubShield club={local} size={40} />
-          <p className="text-white font-bold text-xs text-center leading-tight truncate w-full text-center">{local.nombre}</p>
+          <p className="text-white font-bold text-xs text-center leading-tight truncate w-full">{local.nombre}</p>
         </div>
 
         {/* Score / vs */}
@@ -270,7 +397,7 @@ function PartidoCard({ partido, onSimular, loading, clubId }) {
               >{partido.puntosVisitante}</span>
             </div>
           ) : (
-            <span className="text-gray-600 font-bold text-sm">VS</span>
+            <span className="text-gray-600 font-bold text-xs">Toque para ver</span>
           )}
           {partido.jugado && (
             <p className="text-[10px] text-gray-600 mt-0.5">{partido.triesLocal}T – {partido.triesVisitante}T</p>
@@ -280,22 +407,9 @@ function PartidoCard({ partido, onSimular, loading, clubId }) {
         {/* Visitante */}
         <div className="flex flex-col items-center gap-1.5 flex-1">
           <ClubShield club={visitante} size={40} />
-          <p className="text-white font-bold text-xs text-center leading-tight truncate w-full text-center">{visitante.nombre}</p>
+          <p className="text-white font-bold text-xs text-center leading-tight truncate w-full">{visitante.nombre}</p>
         </div>
       </div>
-
-      {!partido.jugado && (
-        <div className="mt-3 flex justify-center">
-          <button
-            onClick={() => onSimular(partido.id)}
-            disabled={loading}
-            className="px-6 py-2 rounded-lg font-bold text-xs text-white uppercase tracking-wider disabled:opacity-50 transition-opacity hover:opacity-90"
-            style={{ background: '#E8172C' }}
-          >
-            {loading ? 'Simulando...' : 'Simular'}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -310,6 +424,7 @@ function TabLiga({ clubId }) {
   const [loadingPartido, setLoadingPartido] = useState(null);
   const [resultados, setResultados] = useState([]);
   const [animacion, setAnimacion]   = useState(null);
+  const [preMatch, setPreMatch]     = useState(null);
   const [showFinalizar, setShowFinalizar] = useState(false);
   const [finalizando, setFinalizando]     = useState(false);
   const [temporadaFinalizada, setTemporadaFinalizada] = useState(null);
@@ -449,6 +564,7 @@ function TabLiga({ clubId }) {
             clubId={clubId}
             onSimular={handleSimularPartido}
             loading={loadingPartido === p.id}
+            onPreview={setPreMatch}
           />
         ))}
       </div>
@@ -490,6 +606,15 @@ function TabLiga({ clubId }) {
         </div>
       )}
 
+      {preMatch && (
+        <PreMatchModal
+          partido={preMatch}
+          clubId={clubId}
+          onSimular={handleSimularPartido}
+          onClose={() => setPreMatch(null)}
+          simLoading={loadingPartido === preMatch.id}
+        />
+      )}
       {animacion && (
         <MatchAnimation
           resultado={animacion.resultado}
@@ -508,8 +633,9 @@ function TabLiga({ clubId }) {
 function TabCopa({ clubId }) {
   const [copa, setCopa]   = useState(null);
   const [loading, setLoading]   = useState(true);
-  const [accion, setAccion]     = useState(null);
-  const [animacion, setAnimacion] = useState(null);
+  const [accion, setAccion]         = useState(null);
+  const [animacion, setAnimacion]   = useState(null);
+  const [preMatch, setPreMatch]     = useState(null);
   const [loadingPartido, setLoadingPartido] = useState(null);
 
   const cargar = async () => { const data = await getCopa(); setCopa(data); };
@@ -589,7 +715,7 @@ function TabCopa({ clubId }) {
         <div className="space-y-3">
           <p className="section-title">Semifinales</p>
           {semis.map(p => (
-            <PartidoCard key={p.id} partido={p} clubId={clubId} onSimular={handleSimular} loading={loadingPartido === p.id} />
+            <PartidoCard key={p.id} partido={p} clubId={clubId} onSimular={handleSimular} loading={loadingPartido === p.id} onPreview={setPreMatch} />
           ))}
         </div>
       )}
@@ -610,10 +736,19 @@ function TabCopa({ clubId }) {
       {final && (
         <div className="space-y-3">
           <p className="section-title" style={{ color: '#E8C000' }}>🏆 Gran Final</p>
-          <PartidoCard partido={final} clubId={clubId} onSimular={handleSimular} loading={loadingPartido === final.id} />
+          <PartidoCard partido={final} clubId={clubId} onSimular={handleSimular} loading={loadingPartido === final.id} onPreview={setPreMatch} />
         </div>
       )}
 
+      {preMatch && (
+        <PreMatchModal
+          partido={preMatch}
+          clubId={clubId}
+          onSimular={handleSimular}
+          onClose={() => setPreMatch(null)}
+          simLoading={loadingPartido === preMatch.id}
+        />
+      )}
       {animacion && (
         <MatchAnimation resultado={animacion.resultado} partido={animacion.partido} onClose={async () => { setAnimacion(null); await cargar(); }} />
       )}

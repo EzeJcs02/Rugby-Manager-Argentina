@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getJugadores, getJornadas, toggleVenta, getClubs } from '../api/client.js';
+import { getJugadores, getJornadas, toggleVenta, getJugadorStats } from '../api/client.js';
 
 const POSICION_NUM = {
   'Pilar Izq': 1, 'Hooker': 2, 'Pilar Der': 3,
@@ -42,6 +42,39 @@ function barColor(v) {
 function overall(j) {
   const sum = ATTRS.reduce((s, a) => s + j[a.key], 0);
   return Math.round(sum / ATTRS.length);
+}
+
+function JugadorStats({ jugadorId }) {
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    getJugadorStats(jugadorId).then(setStats).catch(() => {});
+  }, [jugadorId]);
+  if (!stats) return null;
+  if (stats.tries === 0 && stats.penales === 0 && stats.apariciones === 0) return null;
+  return (
+    <div className="flex gap-4 pt-1.5">
+      {stats.apariciones > 0 && (
+        <span className="text-[10px] text-gray-600">
+          Partidos: <span className="text-gray-400">{stats.apariciones}</span>
+        </span>
+      )}
+      {stats.tries > 0 && (
+        <span className="text-[10px] text-gray-600">
+          Tries: <span style={{ color: '#4ADE80' }}>{stats.tries}</span>
+        </span>
+      )}
+      {stats.penales > 0 && (
+        <span className="text-[10px] text-gray-600">
+          Pen: <span className="text-yellow-500">{stats.penales}</span>
+        </span>
+      )}
+      {stats.puntos > 0 && (
+        <span className="text-[10px] text-gray-600">
+          Pts: <span className="text-white">{stats.puntos}</span>
+        </span>
+      )}
+    </div>
+  );
 }
 
 function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
@@ -100,6 +133,7 @@ function JugadorRow({ j, jornadaActual, selected, onSelect, onToggleVenta }) {
               </div>
             ))}
           </div>
+          <JugadorStats jugadorId={j.id} />
           <div className="mt-2 pt-2 border-t border-gray-800/50 flex items-center justify-between gap-4 text-xs text-gray-500">
             <div className="flex gap-4 flex-wrap">
               <span>Valor: <span className="text-white">${(j.valor / 1000).toFixed(0)}k</span></span>

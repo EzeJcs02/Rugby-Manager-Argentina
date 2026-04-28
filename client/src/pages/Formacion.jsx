@@ -2,30 +2,29 @@ import { useEffect, useState } from 'react';
 import { getJugadores, getFormacion, guardarFormacion, getJornadas } from '../api/client.js';
 
 const POSICIONES_NUM = {
-  1:  { label: 'Pilar Izq',    pos: 'Pilar Izq' },
-  2:  { label: 'Hooker',       pos: 'Hooker' },
-  3:  { label: 'Pilar Der',    pos: 'Pilar Der' },
-  4:  { label: '2da Línea',    pos: 'Segunda Línea' },
-  5:  { label: '2da Línea',    pos: 'Segunda Línea' },
-  6:  { label: 'Ala',          pos: 'Ala' },
-  7:  { label: 'Ala',          pos: 'Ala' },
-  8:  { label: 'Octavo',       pos: 'Octavo' },
-  9:  { label: 'Medio Scrum',  pos: 'Medio Scrum' },
-  10: { label: 'Apertura',     pos: 'Apertura' },
-  11: { label: 'Wing Izq',     pos: 'Wing' },
-  12: { label: 'Centro',       pos: 'Centro' },
-  13: { label: 'Centro',       pos: 'Centro' },
-  14: { label: 'Wing Der',     pos: 'Wing' },
-  15: { label: 'Fullback',     pos: 'Fullback' },
+  1:  { label: 'Pilar Izq',   pos: 'Pilar Izq' },
+  2:  { label: 'Hooker',      pos: 'Hooker' },
+  3:  { label: 'Pilar Der',   pos: 'Pilar Der' },
+  4:  { label: '2da Línea',   pos: 'Segunda Línea' },
+  5:  { label: '2da Línea',   pos: 'Segunda Línea' },
+  6:  { label: 'Ala',         pos: 'Ala' },
+  7:  { label: 'Ala',         pos: 'Ala' },
+  8:  { label: 'Octavo',      pos: 'Octavo' },
+  9:  { label: 'M. Scrum',    pos: 'Medio Scrum' },
+  10: { label: 'Apertura',    pos: 'Apertura' },
+  11: { label: 'Wing Izq',    pos: 'Wing' },
+  12: { label: 'Centro',      pos: 'Centro' },
+  13: { label: 'Centro',      pos: 'Centro' },
+  14: { label: 'Wing Der',    pos: 'Wing' },
+  15: { label: 'Fullback',    pos: 'Fullback' },
 };
 
 const TACTICAS = [
-  { value: 'ataque',  label: 'Ataque',  desc: '+10% ataque / -7% defensa', color: 'text-orange-400' },
-  { value: 'neutro',  label: 'Neutro',  desc: 'Sin modificadores',         color: 'text-gray-300' },
-  { value: 'defensa', label: 'Defensa', desc: '+10% defensa / -7% ataque', color: 'text-blue-400' },
+  { value: 'ataque',  label: 'Ataque',  desc: '+10% ofensivo',  icon: '⚡', color: '#FB923C' },
+  { value: 'neutro',  label: 'Neutro',  desc: 'Sin modif.',     icon: '⚖', color: '#9CA3AF' },
+  { value: 'defensa', label: 'Defensa', desc: '+10% defensivo', icon: '🛡', color: '#60A5FA' },
 ];
 
-// Field layout: rows of shirt numbers (top = front row near scrum)
 const CAMPO_FILAS = [
   [1, 2, 3],
   [4, 5],
@@ -35,26 +34,33 @@ const CAMPO_FILAS = [
   [11, 15, 14],
 ];
 
+const ATTRS = ['scrum','lineout','tackle','velocidad','pase','pie','vision','potencia','motor','liderazgo'];
+const ovr = j => Math.round(ATTRS.reduce((s, a) => s + j[a], 0) / ATTRS.length);
+
 function PositionSlot({ numero, jugador, onClick }) {
+  const filled = !!jugador;
   return (
     <button
       onClick={() => onClick(numero)}
-      className={`flex flex-col items-center justify-center rounded-lg border-2 transition-all px-2 py-1.5 min-w-[72px] max-w-[88px]
-        ${jugador
-          ? 'border-white/30 bg-green-900/60 hover:bg-green-800/70'
-          : 'border-white/20 border-dashed bg-green-950/50 hover:bg-green-900/40'
-        }`}
+      className="flex flex-col items-center justify-center transition-all px-1.5 py-1.5 rounded-lg"
+      style={{
+        minWidth: 70, maxWidth: 88,
+        background: filled ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.25)',
+        border: filled ? '2px solid rgba(255,255,255,0.4)' : '2px dashed rgba(255,255,255,0.2)',
+      }}
     >
-      <span className="text-white/50 text-[10px] leading-none">{numero}</span>
-      {jugador ? (
+      <span className="text-white/40 text-[9px] leading-none font-mono">{numero}</span>
+      {filled ? (
         <>
           <span className="text-white font-bold text-[11px] leading-tight mt-0.5 text-center truncate w-full">
             {jugador.apellido}
           </span>
-          <span className="text-green-300/70 text-[9px] leading-none">{POSICIONES_NUM[numero]?.label}</span>
+          <span className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            {POSICIONES_NUM[numero]?.label}
+          </span>
         </>
       ) : (
-        <span className="text-white/30 text-[10px] mt-0.5">{POSICIONES_NUM[numero]?.label}</span>
+        <span className="text-white/25 text-[9px] mt-0.5 text-center">{POSICIONES_NUM[numero]?.label}</span>
       )}
     </button>
   );
@@ -62,54 +68,77 @@ function PositionSlot({ numero, jugador, onClick }) {
 
 function PickerModal({ numero, jugadores, onSelect, onClose }) {
   const posRequerida = POSICIONES_NUM[numero]?.pos;
-  const mismaPos = jugadores.filter(j => j.posicion === posRequerida);
-  const otrasPos = jugadores.filter(j => j.posicion !== posRequerida);
+  const mismaPos   = jugadores.filter(j => j.posicion === posRequerida);
+  const otrasPos   = jugadores.filter(j => j.posicion !== posRequerida);
 
-  const renderRow = (j) => (
-    <button
-      key={j.id}
-      onClick={() => !j._lesionado && onSelect(j.id)}
-      disabled={j._lesionado}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left
-        ${j._lesionado ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-700'}`}
-    >
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <p className="text-white text-sm font-medium">{j.nombre} {j.apellido}</p>
-          {j._lesionado && <span className="text-[10px] text-red-400 bg-red-900/40 px-1 rounded">No disponible</span>}
+  const renderRow = (j) => {
+    const esNatural = j.posicion === posRequerida;
+    return (
+      <button
+        key={j.id}
+        onClick={() => !j._lesionado && onSelect(j.id)}
+        disabled={j._lesionado}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{ background: 'transparent' }}
+        onMouseEnter={e => { if (!j._lesionado) e.currentTarget.style.background = '#1E1E32'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+      >
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-white text-sm font-medium">{j.nombre} {j.apellido}</p>
+            {j._lesionado && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ background: 'rgba(232,23,44,0.15)', color: '#F87171' }}>
+                No disp.
+              </span>
+            )}
+          </div>
+          <p className="text-gray-600 text-xs">{j.posicion} · {j.edad} años · moral {j.moral}</p>
         </div>
-        <p className="text-gray-400 text-xs">{j.posicion} · {j.edad} años · moral {j.moral}</p>
-      </div>
-      <div className="text-right">
-        <p className="text-rugby-green text-xs font-bold">{j.posicion === posRequerida ? '✓ Natural' : '⚠ Fuera'}</p>
-      </div>
-    </button>
-  );
+        <div className="text-right flex-shrink-0">
+          <p className="text-xs font-bold" style={{ color: esNatural ? '#4ADE80' : '#FB923C' }}>
+            {esNatural ? '✓ Natural' : '⚠ Fuera'}
+          </p>
+          <p className="text-xs text-gray-600">{ovr(j)}</p>
+        </div>
+      </button>
+    );
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl"
-        onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <h3 className="font-bold text-white">#{numero} – {POSICIONES_NUM[numero]?.label}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl">×</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
+      <div
+        className="w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl rounded-2xl"
+        style={{ background: '#12121F', border: '1px solid #1E1E32' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #1E1E32' }}>
+          <h3 className="font-black text-white text-base">
+            #{numero} — {POSICIONES_NUM[numero]?.label}
+          </h3>
+          <button onClick={onClose} className="text-gray-600 hover:text-white text-xl transition-colors">×</button>
         </div>
+
         <div className="overflow-y-auto flex-1 p-2 space-y-0.5">
-          <p className="text-xs text-gray-500 px-2 py-1">Posición natural</p>
-          {mismaPos.length ? mismaPos.map(renderRow) : <p className="text-gray-600 text-xs px-3">Ninguno disponible</p>}
+          <p className="section-title px-3 py-1">Posición natural</p>
+          {mismaPos.length
+            ? mismaPos.map(renderRow)
+            : <p className="text-gray-700 text-xs px-3 pb-1">Ninguno disponible</p>
+          }
           {otrasPos.length > 0 && (
             <>
-              <p className="text-xs text-gray-500 px-2 pt-2 pb-1">Otras posiciones</p>
+              <p className="section-title px-3 py-1 pt-2">Otras posiciones</p>
               {otrasPos.map(renderRow)}
             </>
           )}
         </div>
-        <div className="px-4 py-3 border-t border-gray-700">
+
+        <div className="px-5 py-3" style={{ borderTop: '1px solid #1E1E32' }}>
           <button
             onClick={() => onSelect(null)}
-            className="w-full text-center text-xs text-red-400 hover:text-red-300 transition-colors"
+            className="w-full text-center text-xs py-1.5 rounded-lg font-medium transition-colors"
+            style={{ color: '#F87171', background: 'rgba(232,23,44,0.06)' }}
           >
-            Quitar jugador
+            Quitar jugador de esta posición
           </button>
         </div>
       </div>
@@ -118,14 +147,14 @@ function PickerModal({ numero, jugadores, onSelect, onClose }) {
 }
 
 export default function Formacion({ clubId }) {
-  const [jugadores, setJugadores] = useState([]);
-  const [asignaciones, setAsignaciones] = useState({});
-  const [tactica, setTactica] = useState('neutro');
-  const [editando, setEditando] = useState(null);
-  const [guardando, setGuardando] = useState(false);
-  const [guardado, setGuardado] = useState(false);
+  const [jugadores, setJugadores]         = useState([]);
+  const [asignaciones, setAsignaciones]   = useState({});
+  const [tactica, setTactica]             = useState('neutro');
+  const [editando, setEditando]           = useState(null);
+  const [guardando, setGuardando]         = useState(false);
+  const [guardado, setGuardado]           = useState(false);
   const [jornadaActual, setJornadaActual] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]             = useState(true);
 
   useEffect(() => {
     Promise.all([getJugadores(clubId), getFormacion(clubId), getJornadas()]).then(([js, form, jornadas]) => {
@@ -135,7 +164,7 @@ export default function Formacion({ clubId }) {
       setJugadores(js.map(j => ({
         ...j,
         _lesionado: (j.lesionadoHasta != null && j.lesionadoHasta >= jNum) ||
-                    (j.convocadoHasta != null && j.convocadoHasta >= jNum),
+                    (j.convocadoHasta  != null && j.convocadoHasta  >= jNum),
       })));
       if (form?.datos && typeof form.datos === 'object' && !Array.isArray(form.datos)) {
         const parsed = {};
@@ -147,8 +176,6 @@ export default function Formacion({ clubId }) {
       if (form?.tactica) setTactica(form.tactica);
     }).finally(() => setLoading(false));
   }, [clubId]);
-
-  const jugadoresAsignados = new Set(Object.values(asignaciones).filter(Boolean));
 
   const handleSelectJugador = (jugadorId) => {
     setAsignaciones(prev => ({ ...prev, [editando]: jugadorId }));
@@ -166,7 +193,7 @@ export default function Formacion({ clubId }) {
     try {
       await guardarFormacion(clubId, { datos: asignaciones, tactica });
       setGuardado(true);
-      setTimeout(() => setGuardado(false), 2000);
+      setTimeout(() => setGuardado(false), 2500);
     } catch {
       alert('Error al guardar formación');
     } finally {
@@ -181,34 +208,29 @@ export default function Formacion({ clubId }) {
 
   const titularesCount = Object.values(asignaciones).filter(Boolean).length;
 
-  if (loading) return <div className="text-gray-500 animate-pulse py-20 text-center">Cargando...</div>;
+  if (loading) return (
+    <div className="text-gray-600 animate-pulse py-20 text-center text-xs uppercase tracking-[0.25em]">Cargando...</div>
+  );
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Formación</h1>
-        <button
-          onClick={handleGuardar}
-          disabled={guardando}
-          className={`btn-primary ${guardado ? 'bg-green-600' : ''}`}
-        >
-          {guardado ? '✓ Guardado' : guardando ? 'Guardando...' : 'Guardar formación'}
-        </button>
-      </div>
-
+    <div className="space-y-4">
       {/* Táctica */}
       <div className="card">
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Táctica</h2>
-        <div className="flex gap-3">
+        <p className="section-title mb-3">Táctica</p>
+        <div className="grid grid-cols-3 gap-2">
           {TACTICAS.map(t => (
             <button
               key={t.value}
               onClick={() => setTactica(t.value)}
-              className={`flex-1 rounded-lg border-2 px-4 py-3 text-center transition-all
-                ${tactica === t.value ? 'border-rugby-green bg-rugby-green/20' : 'border-gray-700 bg-gray-800/50 hover:border-gray-500'}`}
+              className="rounded-xl px-3 py-3 text-center transition-all"
+              style={tactica === t.value
+                ? { background: `${t.color}15`, border: `2px solid ${t.color}60` }
+                : { background: '#0D0D14', border: '2px solid #1E1E32' }
+              }
             >
-              <p className={`font-bold text-sm ${t.color}`}>{t.label}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t.desc}</p>
+              <span className="text-lg block mb-1">{t.icon}</span>
+              <p className="font-bold text-sm" style={{ color: tactica === t.value ? t.color : '#9CA3AF' }}>{t.label}</p>
+              <p className="text-[10px] text-gray-600 mt-0.5">{t.desc}</p>
             </button>
           ))}
         </div>
@@ -217,24 +239,31 @@ export default function Formacion({ clubId }) {
       {/* Campo visual */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Campo</h2>
-          <span className="text-xs text-gray-500">{titularesCount}/15 titulares</span>
+          <p className="section-title mb-0">Campo · {titularesCount}/15</p>
+          <button
+            onClick={handleGuardar}
+            disabled={guardando}
+            className="px-4 py-1.5 rounded-lg font-bold text-xs text-white uppercase tracking-wider disabled:opacity-50 transition-all"
+            style={{ background: guardado ? '#2D6A4F' : '#E8172C' }}
+          >
+            {guardado ? '✓ Guardado' : guardando ? 'Guardando...' : 'Guardar'}
+          </button>
         </div>
 
         <div
           className="relative rounded-xl overflow-hidden"
-          style={{ background: 'linear-gradient(180deg, #15803d 0%, #166534 50%, #15803d 100%)' }}
+          style={{ background: 'linear-gradient(180deg, #166534 0%, #15803d 50%, #166534 100%)' }}
         >
-          {/* Lines */}
+          {/* Líneas del campo */}
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 left-0 right-0 h-px bg-white/10" />
             <div className="absolute bottom-0 left-0 right-0 h-px bg-white/10" />
-            <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
-            <div className="absolute top-1/4 left-0 right-0 h-px bg-white/10" />
-            <div className="absolute top-3/4 left-0 right-0 h-px bg-white/10" />
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-white/15" />
+            <div className="absolute top-1/4 left-0 right-0 h-px bg-white/07" />
+            <div className="absolute top-3/4 left-0 right-0 h-px bg-white/07" />
           </div>
 
-          <div className="relative z-10 py-4 px-3 flex flex-col gap-3">
+          <div className="relative z-10 py-5 px-3 flex flex-col gap-2.5">
             {CAMPO_FILAS.map((fila, i) => (
               <div key={i} className="flex justify-center gap-2">
                 {fila.map(num => (
@@ -250,14 +279,16 @@ export default function Formacion({ clubId }) {
           </div>
 
           <div className="text-center pb-2">
-            <span className="text-white/20 text-[10px] uppercase tracking-widest">← Defensa</span>
+            <span className="text-white/15 text-[9px] uppercase tracking-[0.3em]">← Defensa · Ataque →</span>
           </div>
         </div>
 
-        <p className="text-xs text-gray-600 mt-2 text-center">Hacé click en una posición para asignar un jugador</p>
+        <p className="text-gray-700 text-[10px] text-center mt-2">
+          Tocá una posición para asignar un jugador
+        </p>
       </div>
 
-      {editando && (
+      {editando !== null && (
         <PickerModal
           numero={editando}
           jugadores={jugadoresDisponibles}

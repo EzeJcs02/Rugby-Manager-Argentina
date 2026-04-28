@@ -101,4 +101,29 @@ router.get('/historial/:clubId', async (req, res) => {
   }
 });
 
+// GET /api/estadisticas/jugador/:id
+router.get('/jugador/:id', async (req, res) => {
+  try {
+    const jugadorId = parseInt(req.params.id);
+    const partidos = await prisma.partido.findMany({ where: { jugado: true } });
+
+    let tries = 0, penales = 0, drops = 0, puntos = 0, apariciones = 0;
+
+    for (const p of partidos) {
+      const eventos = Array.isArray(p.eventos) ? p.eventos : [];
+      const evs = eventos.filter(e => e.jugadorId === jugadorId);
+      if (evs.length > 0) apariciones++;
+      for (const ev of evs) {
+        if (ev.tipo === 'try')   { tries++;   puntos += ev.puntos; }
+        if (ev.tipo === 'penal') { penales++; puntos += ev.puntos; }
+        if (ev.tipo === 'drop')  { drops++;   puntos += ev.puntos; }
+      }
+    }
+
+    res.json({ tries, penales, drops, puntos, apariciones });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
