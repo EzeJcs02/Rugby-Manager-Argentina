@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { getJornadas, getJornada, simularJornada, simularPartido, finalizarTemporada, getCopa, iniciarCopa, crearFinal, getJugadores } from '../api/client.js';
+import { getJornadas, getJornada, simularJornada, simularPartido, finalizarTemporada, getCopa, iniciarCopa, crearFinal, getJugadores, getTabla } from '../api/client.js';
 import { ClubShield } from '../components/Layout.jsx';
 
 const TIPO_ICON  = { try: '🏉', penal: '🎯', drop: '🦵' };
@@ -202,27 +202,84 @@ function FinalizarModal({ onConfirm, onClose, loading }) {
 }
 
 // ─── Pantalla de nueva temporada ───────────────────────────────────────────────
+const ATTRS_OVR = ['scrum','lineout','tackle','velocidad','pase','pie','vision','potencia','motor','liderazgo'];
+const ovrJ = j => Math.round(ATTRS_OVR.reduce((s, a) => s + (j[a] ?? 0), 0) / ATTRS_OVR.length);
+
 function NuevaTemporadaScreen({ data, onClose }) {
+  const juveniles      = data.misJuveniles ?? [];
+  const proximaJornada = data.proximaJornada ?? [];
+
   return (
-    <div
-      className="rounded-2xl p-6 text-center space-y-4"
-      style={{ background: 'linear-gradient(135deg, #0D1F18 0%, #12121F 100%)', border: '1px solid #2D6A4F' }}
-    >
-      <p className="text-4xl">🎉</p>
-      <div>
-        <p className="text-white font-black text-2xl uppercase tracking-tight">{data.temporada?.nombre ?? 'Nueva Temporada'}</p>
-        <p className="text-gray-400 text-sm mt-1">La temporada ha comenzado</p>
-      </div>
-      <div className="grid grid-cols-2 gap-3 text-center">
-        <div className="rounded-xl py-3 px-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1E1E32' }}>
-          <p className="text-white font-black text-2xl">{data.retirados ?? 0}</p>
-          <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">Retirados</p>
+    <div className="space-y-4">
+      {/* Hero */}
+      <div
+        className="rounded-2xl p-6 text-center space-y-3"
+        style={{ background: 'linear-gradient(135deg, #0D1F18 0%, #12121F 100%)', border: '1px solid #2D6A4F' }}
+      >
+        <p className="text-4xl">🎉</p>
+        <div>
+          <p className="text-white font-black text-2xl uppercase tracking-tight">{data.temporada?.nombre ?? 'Nueva Temporada'}</p>
+          <p className="text-gray-400 text-sm mt-1">¡Comienza una nueva temporada!</p>
         </div>
-        <div className="rounded-xl py-3 px-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1E1E32' }}>
-          <p className="text-white font-black text-2xl">{data.juvenilesCreados ?? 0}</p>
-          <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">Juveniles</p>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="rounded-xl py-3 px-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1E1E32' }}>
+            <p className="text-white font-black text-2xl">{data.retirados ?? 0}</p>
+            <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">Retirados</p>
+          </div>
+          <div className="rounded-xl py-3 px-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1E1E32' }}>
+            <p className="text-white font-black text-2xl">{data.juvenilesCreados ?? 0}</p>
+            <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">Juveniles en liga</p>
+          </div>
         </div>
       </div>
+
+      {/* Mis juveniles */}
+      {juveniles.length > 0 && (
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: '#12121F', border: '1px solid #1E1E32' }}>
+          <p className="section-title">🌱 Juveniles incorporados a tu plantel</p>
+          <div className="grid grid-cols-2 gap-2">
+            {juveniles.map(j => (
+              <div
+                key={j.id}
+                className="rounded-xl px-3 py-2.5 flex items-center gap-2"
+                style={{ background: '#0D0D14', border: '1px solid #1E1E32' }}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-xs font-bold truncate">{j.nombre} {j.apellido}</p>
+                  <p className="text-gray-600 text-[10px]">{j.posicion} · {j.edad} años</p>
+                </div>
+                <span
+                  className="text-xs font-black flex-shrink-0 px-1.5 py-0.5 rounded"
+                  style={{ background: 'rgba(74,222,128,0.1)', color: '#4ADE80' }}
+                >
+                  {ovrJ(j)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Próxima jornada */}
+      {proximaJornada.length > 0 && (
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: '#12121F', border: '1px solid #1E1E32' }}>
+          <p className="section-title">📅 Jornada 1 — Próximos partidos</p>
+          <div className="space-y-1.5">
+            {proximaJornada.map(p => (
+              <div
+                key={p.id}
+                className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg"
+                style={{ background: '#0D0D14' }}
+              >
+                <span className="flex-1 text-right truncate text-gray-300">{p.clubLocal?.nombre}</span>
+                <span className="flex-shrink-0 text-gray-700 font-bold w-8 text-center">vs</span>
+                <span className="flex-1 truncate text-gray-300">{p.clubVisitante?.nombre}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <button
         onClick={onClose}
         className="w-full py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider transition-opacity hover:opacity-90"
@@ -230,6 +287,130 @@ function NuevaTemporadaScreen({ data, onClose }) {
       >
         Ir a la nueva temporada →
       </button>
+    </div>
+  );
+}
+
+// ─── Resumen post-jornada ─────────────────────────────────────────────────────
+function ResumenJornada({ resultados, numero, clubId, onClose }) {
+  const miResultado = resultados.find(r =>
+    r.clubLocalId === clubId || r.clubVisitanteId === clubId
+  );
+
+  const getMiResultado = (r) => {
+    if (!r) return null;
+    const soyLocal = r.clubLocalId === clubId;
+    const misPts   = soyLocal ? r.puntosLocal : r.puntosVisitante;
+    const riPts    = soyLocal ? r.puntosVisitante : r.puntosLocal;
+    if (misPts > riPts)  return { label: 'V', color: '#4ADE80', bg: 'rgba(74,222,128,0.1)' };
+    if (misPts === riPts) return { label: 'E', color: '#9CA3AF', bg: 'rgba(156,163,175,0.1)' };
+    return { label: 'D', color: '#F87171', bg: 'rgba(248,113,113,0.1)' };
+  };
+
+  const totalLesionados = resultados.flatMap(r => r.lesionados ?? []);
+  const resultadoMio = getMiResultado(miResultado);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85" onClick={onClose}>
+      <div
+        className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+        style={{ background: '#0D0D14', border: '1px solid #1E1E32' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-5 py-4 flex-shrink-0" style={{ borderBottom: '1px solid #1E1E32' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.25em] text-gray-600">Fin de jornada</p>
+              <h3 className="text-white font-black text-xl">Jornada {numero}</h3>
+            </div>
+            {resultadoMio && (
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                style={{ background: resultadoMio.bg, border: `1px solid ${resultadoMio.color}40` }}
+              >
+                <span className="font-black text-xl" style={{ color: resultadoMio.color }}>{resultadoMio.label}</span>
+                <div className="text-[10px] leading-tight text-right">
+                  {(() => {
+                    const r = miResultado;
+                    const soyLocal = r.clubLocalId === clubId;
+                    return (
+                      <>
+                        <p className="text-white font-bold">{soyLocal ? r.puntosLocal : r.puntosVisitante} – {soyLocal ? r.puntosVisitante : r.puntosLocal}</p>
+                        <p className="text-gray-600">Mi equipo</p>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Resultados */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <p className="section-title mb-2">Todos los resultados</p>
+          {resultados.map(r => {
+            const esMio = r.clubLocalId === clubId || r.clubVisitanteId === clubId;
+            const ganadorLocal = r.puntosLocal > r.puntosVisitante;
+            const ganadorVis   = r.puntosVisitante > r.puntosLocal;
+            return (
+              <div
+                key={r.id}
+                className="rounded-xl px-3 py-3"
+                style={{
+                  background: esMio ? 'rgba(232,23,44,0.06)' : '#12121F',
+                  border: `1px solid ${esMio ? 'rgba(232,23,44,0.25)' : '#1E1E32'}`,
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="flex-1 text-xs font-bold text-right truncate"
+                    style={{ color: ganadorLocal ? '#fff' : '#6B7280' }}
+                  >{r.clubLocal.nombre}</span>
+                  <div className="flex-shrink-0 flex items-center gap-1 font-black text-sm tabular-nums">
+                    <span style={{ color: ganadorLocal ? '#E8172C' : '#fff' }}>{r.puntosLocal}</span>
+                    <span className="text-gray-700">–</span>
+                    <span style={{ color: ganadorVis ? '#E8172C' : '#fff' }}>{r.puntosVisitante}</span>
+                  </div>
+                  <span
+                    className="flex-1 text-xs font-bold truncate"
+                    style={{ color: ganadorVis ? '#fff' : '#6B7280' }}
+                  >{r.clubVisitante.nombre}</span>
+                </div>
+                {r.lesionados?.length > 0 && (
+                  <p className="text-[10px] mt-1.5 pl-1" style={{ color: '#F87171' }}>
+                    🩹 {r.lesionados.map(l => l.jugadorNombre).join(', ')}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+
+          {totalLesionados.length > 0 && (
+            <div
+              className="rounded-xl px-4 py-3 mt-2"
+              style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.15)' }}
+            >
+              <p className="text-[10px] uppercase tracking-[0.2em] mb-1.5" style={{ color: '#F87171' }}>
+                🩹 Lesiones en la jornada ({totalLesionados.length})
+              </p>
+              <p className="text-xs text-gray-500">{totalLesionados.map(l => l.jugadorNombre).join(' · ')}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Acción */}
+        <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: '1px solid #1E1E32' }}>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl font-bold text-sm text-white uppercase tracking-wider transition-opacity hover:opacity-90"
+            style={{ background: '#E8172C' }}
+          >
+            Continuar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -423,6 +604,7 @@ function TabLiga({ clubId }) {
   const [simulando, setSimulando]   = useState(false);
   const [loadingPartido, setLoadingPartido] = useState(null);
   const [resultados, setResultados] = useState([]);
+  const [resumenOpen, setResumenOpen] = useState(false);
   const [animacion, setAnimacion]   = useState(null);
   const [preMatch, setPreMatch]     = useState(null);
   const [showFinalizar, setShowFinalizar] = useState(false);
@@ -453,6 +635,7 @@ function TabLiga({ clubId }) {
     try {
       const res = await simularJornada(jornadaActual);
       setResultados(res);
+      setResumenOpen(true);
       await cargarJornada(jornadaActual);
       await cargarJornadas();
     } catch (e) { alert(e.response?.data?.error ?? 'Error'); } finally { setSimulando(false); }
@@ -473,11 +656,20 @@ function TabLiga({ clubId }) {
     try {
       const res = await finalizarTemporada();
       setShowFinalizar(false);
-      setTemporadaFinalizada(res);
-      const js = await cargarJornadas();
+
+      // Cargamos juveniles propios y próxima jornada para la pantalla de pretemporada
+      const [jugadoresMios, js] = await Promise.all([getJugadores(clubId), cargarJornadas()]);
+      const misJuveniles = jugadoresMios.filter(j => j.edad <= 20).slice(0, 4);
       const primera = js[0];
-      setJornadaActual(primera?.numero ?? 1);
-      if (primera) cargarJornada(primera.numero);
+      let proximaJornada = [];
+      if (primera) {
+        proximaJornada = await getJornada(primera.numero);
+        setJornadaActual(primera.numero);
+        setPartidos(proximaJornada);
+        setResultados([]);
+      }
+
+      setTemporadaFinalizada({ ...res, misJuveniles, proximaJornada });
     } catch (e) { alert(e.response?.data?.error ?? 'Error'); } finally { setFinalizando(false); }
   };
 
@@ -569,23 +761,17 @@ function TabLiga({ clubId }) {
         ))}
       </div>
 
-      {/* ── Resultados de jornada simulada ── */}
-      {resultados.length > 0 && (
-        <div className="rounded-xl p-4 space-y-2" style={{ background: '#12121F', border: '1px solid #2D6A4F40' }}>
-          <p className="section-title">Resultados</p>
-          {resultados.map(r => (
-            <div key={r.id} className="space-y-0.5">
-              <div className="flex items-center justify-between text-sm">
-                <span className={r.puntosLocal >= r.puntosVisitante ? 'text-white font-bold' : 'text-gray-500'}>{r.clubLocal.nombre}</span>
-                <span className="text-white font-black tabular-nums mx-3">{r.puntosLocal} – {r.puntosVisitante}</span>
-                <span className={r.puntosVisitante >= r.puntosLocal ? 'text-white font-bold' : 'text-gray-500'}>{r.clubVisitante.nombre}</span>
-              </div>
-              {r.lesionados?.length > 0 && (
-                <p className="text-[10px] text-red-500 pl-1">🩹 {r.lesionados.map(l => l.jugadorNombre).join(', ')}</p>
-              )}
-            </div>
-          ))}
-        </div>
+      {/* ── Indicador de jornada simulada ── */}
+      {resultados.length > 0 && !resumenOpen && (
+        <button
+          onClick={() => setResumenOpen(true)}
+          className="w-full rounded-xl px-4 py-3 text-left flex items-center gap-3 transition-opacity hover:opacity-80"
+          style={{ background: '#12121F', border: '1px solid #2D6A4F40' }}
+        >
+          <span className="text-sm">📋</span>
+          <span className="text-xs font-bold" style={{ color: '#2D6A4F' }}>Ver resumen de la jornada</span>
+          <span className="ml-auto text-gray-600 text-xs">→</span>
+        </button>
       )}
 
       {/* ── Finalizar temporada ── */}
@@ -624,6 +810,14 @@ function TabLiga({ clubId }) {
       )}
       {showFinalizar && (
         <FinalizarModal onConfirm={handleFinalizar} onClose={() => setShowFinalizar(false)} loading={finalizando} />
+      )}
+      {resumenOpen && resultados.length > 0 && (
+        <ResumenJornada
+          resultados={resultados}
+          numero={jornadaActual}
+          clubId={clubId}
+          onClose={() => setResumenOpen(false)}
+        />
       )}
     </div>
   );

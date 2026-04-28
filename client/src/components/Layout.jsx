@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { getClub } from '../api/client.js';
+import { useEffect, useRef, useState } from 'react';
+import { getClub, getNoticias, leerTodasNoticias } from '../api/client.js';
 import { TEAM_LOGOS, SRA_LOGO } from '../constants/logos.js';
 
 const NAV = [
@@ -74,12 +74,87 @@ export function ClubShield({ club, size = 40 }) {
   );
 }
 
+// ─── Panel de notificaciones ──────────────────────────────────────────────────
+function NotifPanel({ clubId, onClose }) {
+  const [noticias, setNoticias] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    getNoticias(clubId).then(setNoticias).finally(() => setLoading(false));
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleLeerTodas = async () => {
+    await leerTodasNoticias(clubId);
+    setNoticias(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  const sinLeer = noticias.filter(n => !n.leida).length;
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-2 w-80 max-h-96 flex flex-col rounded-2xl shadow-2xl z-50 overflow-hidden"
+      style={{ background: '#12121F', border: '1px solid #1E1E32' }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid #1E1E32' }}>
+        <p className="font-black text-white text-sm">Noticias</p>
+        {sinLeer > 0 && (
+          <button
+            onClick={handleLeerTodas}
+            className="text-[10px] font-bold transition-colors hover:text-white"
+            style={{ color: '#E8172C' }}
+          >
+            Marcar todo leído
+          </button>
+        )}
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <p className="text-gray-600 text-xs text-center py-8 animate-pulse uppercase tracking-[0.2em]">Cargando...</p>
+        ) : noticias.length === 0 ? (
+          <p className="text-gray-700 text-xs text-center py-8">Sin noticias</p>
+        ) : noticias.slice(0, 15).map(n => (
+          <div
+            key={n.id}
+            className="px-4 py-3 border-b"
+            style={{
+              borderColor: '#1E1E32',
+              background: n.leida ? 'transparent' : 'rgba(232,23,44,0.04)',
+            }}
+          >
+            <div className="flex items-start gap-2">
+              {!n.leida && (
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: '#E8172C' }} />
+              )}
+              <div className={!n.leida ? '' : 'pl-3.5'}>
+                <p className="text-white text-xs font-medium leading-relaxed">{n.texto}</p>
+                {n.fecha && (
+                  <p className="text-gray-700 text-[10px] mt-0.5">
+                    {new Date(n.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Layout({ clubId, onLogout, children }) {
-  const [club, setClub] = useState(null);
+  const [club, setClub]           = useState(null);
+  const [unread, setUnread]       = useState(0);
+  const [showNotif, setShowNotif] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
     getClub(clubId).then(setClub).catch(() => {});
+    getNoticias(clubId).then(ns => setUnread(ns.filter(n => !n.leida).length)).catch(() => {});
   }, [clubId]);
 
   return (
@@ -126,6 +201,31 @@ export default function Layout({ clubId, onLogout, children }) {
               <span className="text-white font-bold text-sm tabular-nums">{formatBudget(club.presupuesto)}</span>
             </div>
           )}
+
+          {/* Notificaciones */}
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowNotif(v => !v)}
+              className="relative text-gray-600 hover:text-gray-300 transition-colors text-sm p-1.5 rounded-lg hover:bg-white/5"
+              title="Noticias"
+            >
+              🔔
+              {unread > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-black px-0.5"
+                  style={{ background: '#E8172C', color: '#fff' }}
+                >
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </button>
+            {showNotif && (
+              <NotifPanel
+                clubId={clubId}
+                onClose={() => { setShowNotif(false); getNoticias(clubId).then(ns => setUnread(ns.filter(n => !n.leida).length)).catch(() => {}); }}
+              />
+            )}
+          </div>
 
           {/* Logout */}
           <button
